@@ -107,12 +107,12 @@
 
 <body class="antialiased text-slate-800 bg-slate-50 overflow-x-hidden">
   <!-- DESENVOLVIDO POR (SIGNATURE PREMIUM) -->
-  <div class="fixed bottom-4 left-4 z-[9999] pointer-events-auto group">
-    <div class="flex items-center gap-2 bg-white/90 px-3 py-1.5 rounded-xl shadow-lg border border-white/50 backdrop-blur-sm transition-all hover:scale-105 active:scale-95">
-      <div class="w-6 h-6 rounded-lg bg-brand-600 flex items-center justify-center text-white shadow-sm">
-        <i data-lucide="code" class="w-3 h-3"></i>
+  <div class="fixed bottom-32 left-4 sm:bottom-6 sm:left-6 z-[9999] pointer-events-auto group">
+    <div class="flex items-center gap-2 bg-white/90 px-2 py-1 rounded-lg shadow-lg border border-white/50 backdrop-blur-sm transition-all hover:scale-105 active:scale-95">
+      <div class="w-5 h-5 rounded bg-brand-600 flex items-center justify-center text-white shadow-sm">
+        <i data-lucide="code" class="w-2.5 h-2.5"></i>
       </div>
-      <span class="text-[9px] font-black uppercase tracking-wider text-slate-600 whitespace-nowrap">Ferreira Web Design</span>
+      <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-slate-600 whitespace-nowrap">Ferreira Web Design</span>
     </div>
   </div>
 
@@ -877,9 +877,17 @@
       };
 
       const acc = state.config.accompaniments || { extras: [], ponto: [], remocoes: [] };
-      container.innerHTML += renderSection("Ponto da Carne", acc.ponto, "ponto", "radio");
-      container.innerHTML += renderSection("Turbine seu Lanche", acc.extras, "extras", "checkbox");
-      container.innerHTML += renderSection("Retirar Ingredientes", acc.remocoes, "remocoes", "checkbox");
+      
+      const itemNameLower = item.name.toLowerCase();
+      if (itemNameLower.includes("suco") || itemNameLower.includes("bomba baiana")) {
+          const flavorStr = item.description.replace(/[()]/g, '').replace(/ ou /g, ', ');
+          const flavors = flavorStr.split(',').map(f => ({ name: f.trim(), price: 0, available: true }));
+          container.innerHTML += renderSection("Escolha o Sabor", flavors, "sabor", "radio");
+      } else if (item.category !== 'Bebidas') {
+          container.innerHTML += renderSection("Ponto da Carne", acc.ponto, "ponto", "radio");
+          container.innerHTML += renderSection("Turbine seu Lanche", acc.extras, "extras", "checkbox");
+          container.innerHTML += renderSection("Retirar Ingredientes", acc.remocoes, "remocoes", "checkbox");
+      }
 
       document.getElementById('custom-modal').classList.remove('hidden');
       window.refreshIcons();
