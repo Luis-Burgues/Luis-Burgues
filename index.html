@@ -119,8 +119,8 @@
   <div id="splash" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
     <div class="relative mb-6">
       <div class="absolute inset-0 bg-brand-500/20 blur-xl rounded-full animate-pulse"></div>
-      <div class="w-32 h-32 rounded-full bg-brand-100 flex items-center justify-center border-4 border-white shadow-2xl relative z-10 animate-bounce-short overflow-hidden text-brand-600">
-        <i data-lucide="chef-hat" class="w-16 h-16"></i>
+      <div class="w-32 h-32 rounded-full bg-white flex items-center justify-center border-4 border-white shadow-2xl relative z-10 animate-bounce-short overflow-hidden">
+        <img src="logo.jpg" class="w-full h-full object-contain scale-125">
       </div>
     </div>
     <h1 class="font-display font-black text-4xl text-slate-900 tracking-tight">LUIS<span class="text-brand-600">.</span></h1>
@@ -135,8 +135,8 @@
         <!-- O TÚNEL SEGURO -->
         <div class="flex items-center gap-3 cursor-pointer group" onclick="try { window.location.href='admin.html'; } catch(e) { window.toast('No ambiente real, este botão abre o painel de administrador.', 'info'); }">
           <div class="relative transition-transform group-active:scale-95">
-            <div class="w-11 h-11 rounded-full bg-slate-900 border-2 border-white shadow-md flex items-center justify-center overflow-hidden text-brand-500">
-              <i data-lucide="flame" class="w-6 h-6"></i>
+            <div class="w-11 h-11 rounded-full bg-white border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
+              <img src="logo.jpg" class="w-full h-full object-contain scale-110">
             </div>
             <div id="status-indicator" class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-slate-300 border-2 border-white rounded-full transition-colors duration-500"></div>
           </div>
@@ -1077,6 +1077,16 @@
       });
     };
 
+    window.saveFormData = () => {
+      try {
+        const data = {
+          name: document.getElementById('client-name')?.value || '',
+          phone: document.getElementById('client-phone')?.value || ''
+        };
+        localStorage.setItem('burger_form_data_v4', JSON.stringify(data));
+      } catch(e) {}
+    };
+
     window.validateCheckout = () => {
       const btn = document.getElementById('btn-checkout');
       if (!btn) return;
@@ -1107,7 +1117,7 @@
       window.refreshIcons();
     };
 
-    window.sendOrder = async () => {
+    window.sendOrder = () => {
       try {
         if (!state.cart || state.cart.length === 0) return window.toast("Seu carrinho está vazio!", "error");
         if (!window.isStoreOpen()) return window.toast("Loja fechada.", "error");
@@ -1116,8 +1126,8 @@
         btn.innerHTML = '<div class="spinner"></div>';
         btn.disabled = true;
 
-        const name = document.getElementById('client-name').value;
-        const phone = document.getElementById('client-phone').value;
+        const name = document.getElementById('client-name').value.trim();
+        const phone = document.getElementById('client-phone').value.trim();
         const method = document.getElementById('payment-method').value;
         const geralObs = document.getElementById('obs-input')?.value.trim() || "";
 
@@ -1131,7 +1141,7 @@
           const zoneOption = zoneSelect?.selectedOptions?.[0];
           zoneName = zoneOption ? (zoneOption.getAttribute('data-name') || zoneOption.text) : "";
           shipValue = zoneOption ? parseFloat(zoneOption.getAttribute('data-price') || 0) : 0;
-          address = document.getElementById('client-address').value;
+          address = (document.getElementById('client-address')?.value || "").trim();
           shipText = shipValue === 0 ? "Grátis" : `R$ ${shipValue.toFixed(2).replace('.', ',')}`;
         }
 
@@ -1144,7 +1154,39 @@
         const totalFinalCalculated = subtotalVal + shipValue;
         const totalFinal = `R$ ${totalFinalCalculated.toFixed(2).replace('.', ',')}`;
 
+        // BUILD WHATSAPP URL SYNCHRONOUSLY
+        let msg = `🍔 *NOVO PEDIDO - ${(state.config.storeName || 'Hamburgueria').toUpperCase()}*\n`;
+        msg += `👤 *Cliente:* ${name}\n`;
+        msg += `💳 *Pagamento:* ${paymentStatusFull}\n`;
+
+        if (state.deliveryType === 'Entrega') {
+          msg += `📍 *Entrega:* ${zoneName}\n`;
+          msg += `🏠 *Endereço:* ${address}\n`;
+        } else {
+          msg += `📍 *Retirada:* no Balcão\n`;
+        }
+
+        msg += `\n*ITENS DO PEDIDO:*\n`;
+        state.cart.forEach(i => {
+          const itemTotal = (i.price * i.qty).toFixed(2).replace('.', ',');
+          msg += `▪️ *${i.qty}x ${i.name}* (R$ ${itemTotal})\n`;
+          if(i.obs) msg += `   ↳ _${i.obs}_\n`;
+        });
+
+        if (geralObs) msg += `\n📝 *OBS GERAL:* ${geralObs}\n`;
+
+        msg += `\n🧾 *RESUMO*\n`;
+        msg += `Subtotal: R$ ${subtotalStr}\n`;
+        if(state.deliveryType === 'Entrega') msg += `Taxa de Entrega: ${shipText}\n`;
+        msg += `💰 *TOTAL A PAGAR: ${totalFinal}*`;
+
+        const phoneNum = (state.config.phone || "5511999999999").replace(/\D/g, '');
+        const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(msg)}`;
+
+        // Save order locally immediately
         const orderObj = {
+          id: Date.now().toString(),
+          _local: true,
           createdAt: new Date().toISOString(),
           clientName: name,
           phone: phone,
@@ -1157,66 +1199,37 @@
           obsGeral: geralObs,
           paymentMethod: method
         };
-        
-        if (db && auth && auth.currentUser) {
+
+        try {
+          let localOrders = [];
+          try { localOrders = JSON.parse(localStorage.getItem('burger_orders_v4')) || []; } catch(e){}
+          localOrders.unshift(orderObj);
+          localStorage.setItem('burger_orders_v4', JSON.stringify(localOrders));
+        } catch(e){}
+
+        // Save to Firebase in background (no await - won't block)
+        if (db) {
             try {
-                await addDoc(collection(db, "pedidos"), orderObj);
-            } catch(e) { 
-                console.warn("Aviso: Falha ao sincronizar o pedido com a nuvem.", e); 
-                orderObj.id = Date.now().toString();
-                let localOrders = [];
-                try { localOrders = JSON.parse(localStorage.getItem('burger_orders_v4')) || []; } catch(err){}
-                localOrders.unshift(orderObj);
-                localStorage.setItem('burger_orders_v4', JSON.stringify(localOrders));
-            }
-        } else {
-            orderObj.id = Date.now().toString();
-            let localOrders = [];
-            try { localOrders = JSON.parse(localStorage.getItem('burger_orders_v4')) || []; } catch(err){}
-            localOrders.unshift(orderObj);
-            localStorage.setItem('burger_orders_v4', JSON.stringify(localOrders));
+              addDoc(collection(db, "pedidos"), { ...orderObj }).catch(e => console.warn("Firebase save failed:", e));
+            } catch(e) { console.error("Firebase collection error:", e); }
         }
 
-        // BUILD WHATSAPP URL
-        let msg = `🍔 *NOVO PEDIDO - ${state.config.storeName.toUpperCase()}*\n`;
-        msg += `👤 *Cliente:* ${name}\n`;
-        msg += `💳 *Pagamento:* ${paymentStatusFull}\n`;
-
-        if (state.deliveryType === 'Entrega') {
-          msg += `📍 *Entrega:* ${zoneName}\n`;
-          msg += `🏠 *Endereço:* ${address}\n`;
-        } else {
-          msg += `📍 *Entrega:* Retirar no Balcão\n`;
-        }
-
-        msg += `\n*ITENS DO PEDIDO:*\n`;
-        state.cart.forEach(i => {
-          const itemTotal = (i.price * i.qty).toFixed(2).replace('.', ',');
-          msg += `▪️ *${i.qty}x ${i.name}* (R$ ${itemTotal})\n`;
-          if(i.obs) msg += `   ↳ _${i.obs}_\n`;
-        });
-
-        if (geralObs) msg += `\n📝 *OBS GERAL:* ${geralObs}\n`;
-
-        msg += `\n🧾 *RESUMO DA CONTA*\n`;
-        msg += `Subtotal: R$ ${subtotalStr}\n`;
-        if(state.deliveryType === 'Entrega') msg += `Taxa de Entrega: ${shipText}\n`;
-        msg += `💰 *TOTAL A PAGAR: ${totalFinal}*`;
-
-        const phoneNum = state.config.phone ? state.config.phone.replace(/\D/g, '') : "5511999999999";
-        const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(msg)}`;
-
+        // Clear cart
         state.cart = [];
         saveCart();
-        document.getElementById('obs-input').value = "";
-        window.saveFormData();
+        try { document.getElementById('obs-input').value = ""; } catch(e) {}
+        try { window.saveFormData(); } catch(e) {}
 
+        // Open WhatsApp immediately
         window.open(url, '_blank');
-        setTimeout(() => window.location.reload(), 2000);
+        
+        // Re-enable button after a moment
+        setTimeout(() => { window.validateCheckout(); }, 1500);
 
       } catch (err) {
-        window.toast("Erro ao gerar pedido.", "error");
-        window.validateCheckout();
+        console.error("sendOrder error:", err);
+        window.toast("Erro ao gerar pedido: " + err.message, "error");
+        try { window.validateCheckout(); } catch(e) {}
       }
     };
 

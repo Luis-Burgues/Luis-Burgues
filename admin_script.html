@@ -1,0 +1,979 @@
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, getDocs, writeBatch, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const DEFAULT_CATEGORIES = [
+        { id: "Tradicionais", name: "TRADICIONAIS" },
+        { id: "Bacon", name: "LANCHES DE BACON" },
+        { id: "Frango", name: "LANCHES DE FRANGO" },
+        { id: "Toscana", name: "LANCHES DE TOSCANA" },
+        { id: "Calabresa", name: "LANCHES DE CALABRESA" },
+        { id: "Coração", name: "LANCHES DE CORAÇÃO" },
+        { id: "Carne do Sol", name: "CARNE DO SOL" },
+        { id: "Charque", name: "CHARQUE" },
+        { id: "Picanha", name: "PICANHA" },
+        { id: "Cachorro Quente", name: "CACHORRO QUENTE" },
+        { id: "Combos", name: "COMBOS" },
+        { id: "Bebidas", name: "BEBIDAS" }
+    ];
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLRyB1IJOrX39HPQqDh-0ZPtsHG3dCJ68",
+      authDomain: "hamburguerialuis.firebaseapp.com",
+      projectId: "hamburguerialuis",
+      storageBucket: "hamburguerialuis.firebasestorage.app",
+      messagingSenderId: "997551253361",
+      appId: "1:997551253361:web:657e42fcaa1e72980e38d0"
+    };
+
+    let app, db, auth;
+    let listenersActive = false;
+
+    let state = {
+      config: {
+        storeName: "Luis Burguer",
+        phone: "5579988486097",
+        statusMode: "open",
+        openingHours: { start: 18, end: 23 },
+        sizes: [],
+        accompaniments: { extras: [], ponto: [], remocoes: [] },
+        highlights: [],
+        posts: [],
+        pixKey: "",
+        pixName: "Titular",
+        zones: [],
+        categories: DEFAULT_CATEGORIES,
+        deliverers: []
+      },
+      orders: [],
+      knownOrders: new Set(),
+      pendingDispatch: null,
+      editingProductIdx: null,
+      editingHighlightIdx: null,
+      tempProductImage: null,
+      tempEditProductImage: null
+    };
+
+    // UI Helpers
+    window.toast = (m, type = 'success') => {
+      const el = document.getElementById('toast');
+      const icon = document.getElementById('toast-indicator');
+      document.getElementById('toast-msg').innerText = m;
+      
+      if (type === 'error') {
+         icon.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
+      } else if (type === 'info') {
+         icon.className = 'w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]';
+      } else {
+         icon.className = 'w-2 h-2 rounded-full bg-brand-500 shadow-[0_0_8px_#f97316]';
+      }
+
+      el.classList.remove('-translate-y-20', 'opacity-0');
+      el.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        el.classList.remove('translate-y-0', 'opacity-100');
+        el.classList.add('-translate-y-20', 'opacity-0');
+      }, 3500);
+    };
+
+    window.refreshIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
+
+    window.compressImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 500;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } } 
+                    else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
+            };
+            reader.onerror = reject;
+        });
+    };
+
+    // Firebase Initialization
+    window.initFirebase = async () => {
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    startDatabaseListeners();
+                }
+            });
+
+            try {
+                await signInAnonymously(auth);
+            } catch (authError) {
+                console.warn("Auth falhou, tentando de forma local", authError);
+                startDatabaseListeners(); 
+            }
+
+        } catch (e) {
+            console.error("Firebase init failed:", e);
+            startDatabaseListeners();
+        }
+    };
+
+    const startDatabaseListeners = () => {
+        if (listenersActive) return;
+        listenersActive = true;
+
+        const updateConnectionStatus = (isOnline) => {
+            const dot = document.getElementById('admin-status-dot');
+            const lbl = document.getElementById('admin-status-lbl');
+            if(dot && lbl) {
+                if(isOnline) {
+                    dot.className = 'status-dot bg-green-500 shadow-[0_0_8px_#22c55e]';
+                    lbl.innerText = 'Online / Nuvem';
+                } else {
+                    dot.className = 'status-dot bg-amber-500 shadow-[0_0_8px_#f59e0b]';
+                    lbl.innerText = 'Local / Offline';
+                }
+            }
+        };
+
+        if (db) {
+            onSnapshot(doc(db, 'loja', 'configuracoes'), (snap) => {
+                if (snap.exists()) {
+                    updateConnectionStatus(true);
+                    state.config = { ...state.config, ...snap.data() };
+                    if (!state.config.deliverers) state.config.deliverers = [];
+                    localStorage.setItem("burger_config_v4", JSON.stringify(state.config));
+                    window.renderAllViews();
+                }
+            }, (error) => {
+                updateConnectionStatus(false);
+            });
+
+            const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                const freshOrders = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    data.id = docSnap.id;
+                    freshOrders.push(data);
+                    
+                    if(!state.knownOrders.has(data.id) && data.status === 'pendente') {
+                        state.knownOrders.add(data.id);
+                        if(document.getElementById('admin-panel').classList.contains('hidden') === false) {
+                            window.toast("Tem um novo pedido!", "info");
+                            const badge = document.getElementById('orders-badge');
+                            if(badge) badge.classList.remove('hidden');
+                        }
+                    }
+                });
+                state.orders = freshOrders;
+                localStorage.setItem("burger_orders_v4", JSON.stringify(state.orders));
+                window.renderOrders();
+            }, (error) => {
+               console.log("Listen realtime failed pedidos", error);
+            });
+        }
+    };
+
+    window.saveConfigSafe = async (partial) => {
+      state.config = { ...state.config, ...partial };
+      localStorage.setItem("burger_config_v4", JSON.stringify(state.config));
+      
+      if (db) {
+          try {
+              await setDoc(doc(db, 'loja', 'configuracoes'), state.config, { merge: true });
+          } catch(e) { window.toast("Trabalhando offline", "info"); }
+      }
+      window.renderAllViews();
+    };
+
+    window.loadLocalState = () => {
+      try {
+        const savedCfg = localStorage.getItem("burger_config_v4");
+        if (savedCfg) state.config = { ...state.config, ...JSON.parse(savedCfg) };
+        if (!state.config.accompaniments) state.config.accompaniments = { extras: [], ponto: [], remocoes: [] };
+        if (!state.config.posts) state.config.posts = [];
+        if (!state.config.highlights) state.config.highlights = [];
+        if (!state.config.sizes) state.config.sizes = [];
+        if (!state.config.zones) state.config.zones = [];
+        if (!state.config.categories) state.config.categories = DEFAULT_CATEGORIES;
+        if (!state.config.deliverers) state.config.deliverers = [];
+
+        const savedOrders = localStorage.getItem("burger_orders_v4");
+        if (savedOrders) {
+            state.orders = JSON.parse(savedOrders);
+            state.orders.forEach(o => state.knownOrders.add(o.id));
+        }
+      } catch (e) { console.error("Error loading local state", e); }
+    };
+
+    window.renderAllViews = () => {
+        window.renderStoreSettings();
+        window.renderStock();
+        window.renderCategories();
+        window.renderAccompaniments();
+        window.renderHighlights();
+        window.renderPosts();
+        window.renderZones();
+        window.renderDeliverers();
+        window.renderOrders();
+        
+        const storeNameEl = document.getElementById('admin-store-name');
+        if(storeNameEl) storeNameEl.innerText = state.config.storeName;
+    };
+
+    // Authentication
+    window.adminLogin = () => {
+        const pass = document.getElementById('adm-pass').value;
+        if (pass === "1234") {
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.add('flex');
+            window.renderAllViews();
+        } else {
+            window.toast("Palavra-passe Incorreta", "error");
+        }
+    };
+
+    window.adminLogout = () => {
+        document.getElementById('admin-panel').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('flex');
+        document.getElementById('admin-modal').classList.remove('hidden');
+        document.getElementById('adm-pass').value = '';
+    };
+
+    // Tabs Management
+    window.switchAdminTab = (tabId) => {
+        const views = ['view-pedidos', 'view-estoque', 'view-destaques', 'view-avisos', 'view-config', 'view-notify'];
+        const tabs = ['tab-pedidos', 'tab-estoque', 'tab-destaques', 'tab-avisos', 'tab-config', 'tab-notify'];
+        
+        views.forEach(v => document.getElementById(v)?.classList.add('hidden'));
+        tabs.forEach(t => {
+            const el = document.getElementById(t);
+            if(el) {
+                el.classList.remove('sidebar-item-active');
+                el.classList.add('text-slate-400');
+            }
+        });
+
+        const activeView = document.getElementById(`view-${tabId}`);
+        const activeTab = document.getElementById(`tab-${tabId}`);
+        
+        if (activeView) activeView.classList.remove('hidden');
+        if (activeTab) {
+            activeTab.classList.remove('text-slate-400');
+            activeTab.classList.add('sidebar-item-active');
+        }
+
+        if(tabId === 'pedidos') {
+            const badge = document.getElementById('orders-badge');
+            if(badge) badge.classList.add('hidden');
+        }
+    };
+
+    // --- Tab: Store / Config ---
+    window.renderStoreSettings = () => {
+        document.getElementById('cfg-name').value = state.config.storeName || '';
+        document.getElementById('cfg-phone').value = state.config.phone || '';
+        document.getElementById('cfg-pix-name').value = state.config.pixName || '';
+        document.getElementById('cfg-pix-key').value = state.config.pixKey || '';
+
+        const stAutoBtn = document.getElementById('st-auto-btn');
+        const stToggleBtn = document.getElementById('st-toggle-btn');
+        const title = document.getElementById('mf-status-title');
+        const autoArea = document.getElementById('auto-hours-area');
+
+        if(state.config.statusMode === 'auto') {
+            stAutoBtn.classList.replace('text-slate-600', 'text-white');
+            stAutoBtn.classList.replace('bg-white', 'bg-blue-600');
+            stToggleBtn.innerText = "Fechar Manualmente";
+            stToggleBtn.className = "px-5 py-2.5 rounded-lg font-bold text-xs text-white bg-slate-400 hover:bg-slate-500 transition-all shadow-sm";
+            title.innerText = "Automático";
+            autoArea.classList.remove('hidden');
+            document.getElementById('cfg-hour-start').value = state.config.openingHours?.start || 0;
+            document.getElementById('cfg-hour-end').value = state.config.openingHours?.end || 0;
+        } else if (state.config.statusMode === 'open') {
+            stAutoBtn.className = "px-5 py-2.5 rounded-lg font-bold text-xs transition-all border border-slate-200 text-slate-600 bg-white hover:bg-slate-50";
+            stToggleBtn.innerText = "Fechar Loja";
+            stToggleBtn.className = "px-5 py-2.5 rounded-lg font-bold text-xs text-white bg-red-600 hover:bg-red-700 transition-all shadow-sm";
+            title.innerText = "Aberta Manualmente";
+            autoArea.classList.add('hidden');
+        } else {
+            stAutoBtn.className = "px-5 py-2.5 rounded-lg font-bold text-xs transition-all border border-slate-200 text-slate-600 bg-white hover:bg-slate-50";
+            stToggleBtn.innerText = "Abrir Loja";
+            stToggleBtn.className = "px-5 py-2.5 rounded-lg font-bold text-xs text-white bg-green-600 hover:bg-green-700 transition-all shadow-sm";
+            title.innerText = "Fechada Manualmente";
+            autoArea.classList.add('hidden');
+        }
+    };
+
+    window.setStatus = (type) => {
+        if(type === 'auto') {
+            window.saveConfigSafe({ statusMode: 'auto' });
+        } else {
+            const next = state.config.statusMode === 'closed' ? 'open' : 'closed';
+            window.saveConfigSafe({ statusMode: next });
+        }
+        window.toast("Estado atualizado");
+    };
+
+    window.saveOpeningHours = () => {
+        const start = parseInt(document.getElementById('cfg-hour-start').value) || 0;
+        const end = parseInt(document.getElementById('cfg-hour-end').value) || 0;
+        window.saveConfigSafe({ openingHours: { start, end } });
+        window.toast("Horário Guardado");
+    };
+
+    window.saveSettings = () => {
+        window.saveConfigSafe({
+            storeName: document.getElementById('cfg-name').value.trim() || 'Hamburgueria',
+            phone: document.getElementById('cfg-phone').value.trim(),
+            pixName: document.getElementById('cfg-pix-name').value.trim(),
+            pixKey: document.getElementById('cfg-pix-key').value.trim()
+        });
+        window.toast("Configurações Salvas");
+    };
+
+    window.renderZones = () => {
+        const list = document.getElementById('admin-zones-list');
+        if(!list) return;
+        list.innerHTML = '';
+        (state.config.zones || []).forEach((z, idx) => {
+            const priceText = z.price === 0 ? "Grátis" : `R$ ${parseFloat(z.price).toFixed(2)}`;
+            list.innerHTML += `
+               <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl">
+                  <div>
+                      <h4 class="text-xs font-bold text-slate-800 uppercase">${z.name}</h4>
+                      <span class="text-[10px] text-green-600 font-bold">${priceText}</span>
+                  </div>
+                  <button onclick="window.removeZone(${idx})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.addZone = () => {
+        const name = document.getElementById('new-zone-name').value.trim();
+        const price = parseFloat(document.getElementById('new-zone-price').value) || 0;
+        if(!name) return window.toast("Nome da região obrigatório", "error");
+        const newZones = [...(state.config.zones || []), { name, price }];
+        window.saveConfigSafe({ zones: newZones });
+        document.getElementById('new-zone-name').value = '';
+        document.getElementById('new-zone-price').value = '';
+        window.toast("Região adicionada");
+    };
+
+    window.removeZone = (idx) => {
+        const newZones = [...state.config.zones];
+        newZones.splice(idx, 1);
+        window.saveConfigSafe({ zones: newZones });
+    };
+
+    // --- Tab: Estoque ---
+    window.handleNewProductImage = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        state.tempProductImage = await window.compressImage(file);
+        document.getElementById('new-prod-preview').src = state.tempProductImage;
+        document.getElementById('new-prod-preview-box').classList.remove('hidden');
+    };
+
+    window.clearNewProductImage = () => {
+        state.tempProductImage = null;
+        document.getElementById('new-prod-file').value = '';
+        document.getElementById('new-prod-preview-box').classList.add('hidden');
+        document.getElementById('new-prod-preview').src = '';
+    };
+
+    window.renderCategoriesDropdown = () => {
+        const selMap = [document.getElementById('new-prod-cat'), document.getElementById('edit-prod-cat')];
+        selMap.forEach(sel => {
+            if(!sel) return;
+            sel.innerHTML = '';
+            (state.config.categories || []).forEach(c => {
+                const id = c.id || c;
+                const name = c.name || c;
+                sel.innerHTML += `<option value="${id}">${name}</option>`;
+            });
+        });
+    };
+
+    window.renderCategories = () => {
+        window.renderCategoriesDropdown();
+        const list = document.getElementById('categories-list');
+        if(!list) return;
+        list.innerHTML = '';
+        (state.config.categories || []).forEach((c, idx) => {
+            const name = c.name || c;
+            list.innerHTML += `
+               <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl">
+                  <span class="text-xs font-bold text-slate-800 uppercase">${name}</span>
+                  <button onclick="window.removeCategory(${idx})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.addCategory = () => {
+        const name = document.getElementById('new-cat-name').value.trim();
+        if(!name) return window.toast("Nome obrigatório");
+        const id = name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const newCat = { id, name };
+        const cats = [...(state.config.categories || []), newCat];
+        window.saveConfigSafe({ categories: cats });
+        document.getElementById('new-cat-name').value = '';
+        window.toast("Categoria adicionada");
+    };
+
+    window.removeCategory = (idx) => {
+        if(confirm("Remover esta categoria irá esconder os produtos dela. Tem a certeza?")) {
+            const cats = [...(state.config.categories || [])];
+            cats.splice(idx, 1);
+            window.saveConfigSafe({ categories: cats });
+        }
+    };
+
+    window.addProduct = () => {
+        const title = document.getElementById('new-prod-name').value.trim();
+        const price = parseFloat(document.getElementById('new-prod-price').value) || 0;
+        const desc = document.getElementById('new-prod-desc').value.trim();
+        const cat = document.getElementById('new-prod-cat').value;
+        const custom = document.getElementById('new-prod-custom').value === 'true';
+
+        if(!title || !cat) return window.toast("Título e Categoria são obrigatórios", "error");
+
+        const newItem = {
+            name: title, price: price, description: desc, category: cat, customizable: custom, available: true, image: state.tempProductImage || null
+        };
+
+        const newSizes = [...(state.config.sizes || []), newItem];
+        window.saveConfigSafe({ sizes: newSizes });
+
+        document.getElementById('new-prod-name').value = '';
+        document.getElementById('new-prod-price').value = '';
+        document.getElementById('new-prod-desc').value = '';
+        window.clearNewProductImage();
+        window.toast("Produto Adicionado!");
+    };
+
+    window.renderStock = () => {
+        const list = document.getElementById('stock-list');
+        if(!list) return;
+        list.innerHTML = '';
+        
+        let groups = {};
+        (state.config.sizes || []).forEach((item, idx) => {
+            if(!groups[item.category]) groups[item.category] = [];
+            groups[item.category].push({ item, idx });
+        });
+
+        for (const [cat, items] of Object.entries(groups)) {
+            list.innerHTML += `<div class="bg-slate-100 p-2 rounded-lg text-[10px] font-black uppercase text-slate-500 mt-4">${cat}</div>`;
+            items.forEach(({item, idx}) => {
+                const isAvail = item.available !== false;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl ${isAvail ? '' : 'opacity-50 grayscale'}">
+                        <div class="flex items-center gap-3">
+                            ${item.image ? `<img src="${item.image}" class="w-10 h-10 rounded-lg object-cover">` : `<div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400"><i data-lucide="beef" class="w-5 h-5"></i></div>`}
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-800">${item.name}</h4>
+                                <span class="text-[10px] font-bold text-brand-600 block">R$ ${(item.price || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="window.toggleProductAvailability(${idx})" title="Ativar/Desativar" class="p-2 ${isAvail ? 'text-green-500 bg-green-50 hover:bg-green-100' : 'text-slate-400 bg-slate-100 hover:bg-slate-200'} rounded-lg"><i data-lucide="${isAvail ? 'eye' : 'eye-off'}" class="w-4 h-4"></i></button>
+                            <button onclick="window.openEditProductModal(${idx})" title="Editar" class="p-2 text-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                            <button onclick="window.removeProduct(${idx})" title="Deletar" class="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        window.refreshIcons();
+    };
+
+    window.toggleProductAvailability = (idx) => {
+        const s = [...(state.config.sizes || [])];
+        s[idx].available = s[idx].available !== false ? false : true;
+        window.saveConfigSafe({ sizes: s });
+    };
+
+    window.removeProduct = (idx) => {
+        if(confirm("Deletar produto?")) {
+            const s = [...(state.config.sizes || [])];
+            s.splice(idx, 1);
+            window.saveConfigSafe({ sizes: s });
+        }
+    };
+
+    window.openEditProductModal = (idx) => {
+        const item = state.config.sizes[idx];
+        state.editingProductIdx = idx;
+        document.getElementById('edit-prod-name').value = item.name;
+        document.getElementById('edit-prod-price').value = item.price;
+        document.getElementById('edit-prod-desc').value = item.description || '';
+        document.getElementById('edit-prod-cat').value = item.category || (state.config.categories.length > 0 ? (state.config.categories[0].id || state.config.categories[0]) : '');
+        document.getElementById('edit-prod-custom').value = item.customizable ? 'true' : 'false';
+        
+        state.tempEditProductImage = item.image;
+        if(item.image) {
+            document.getElementById('edit-prod-preview').src = item.image;
+            document.getElementById('edit-prod-preview-box').classList.remove('hidden');
+        } else {
+            window.clearEditProductImage();
+        }
+
+        document.getElementById('edit-prod-modal').classList.remove('hidden');
+        document.getElementById('edit-prod-modal').classList.add('flex');
+    };
+
+    window.closeEditProductModal = () => {
+        document.getElementById('edit-prod-modal').classList.add('hidden');
+        document.getElementById('edit-prod-modal').classList.remove('flex');
+        state.editingProductIdx = null;
+    };
+
+    window.handleEditProductImage = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        state.tempEditProductImage = await window.compressImage(file);
+        document.getElementById('edit-prod-preview').src = state.tempEditProductImage;
+        document.getElementById('edit-prod-preview-box').classList.remove('hidden');
+    };
+
+    window.clearEditProductImage = () => {
+        state.tempEditProductImage = null;
+        document.getElementById('edit-prod-file').value = '';
+        document.getElementById('edit-prod-preview-box').classList.add('hidden');
+        document.getElementById('edit-prod-preview').src = '';
+    };
+
+    window.saveEditedProduct = () => {
+        if(state.editingProductIdx === null) return;
+        
+        const title = document.getElementById('edit-prod-name').value.trim();
+        const price = parseFloat(document.getElementById('edit-prod-price').value) || 0;
+        const desc = document.getElementById('edit-prod-desc').value.trim();
+        const cat = document.getElementById('edit-prod-cat').value;
+        const custom = document.getElementById('edit-prod-custom').value === 'true';
+
+        if(!title || !cat) return window.toast("Título e Categoria são obrigatórios", "error");
+
+        const s = [...(state.config.sizes || [])];
+        s[state.editingProductIdx] = {
+            ...s[state.editingProductIdx],
+            name: title, price: price, description: desc, category: cat, customizable: custom, image: state.tempEditProductImage
+        };
+
+        window.saveConfigSafe({ sizes: s });
+        window.closeEditProductModal();
+        window.toast("Produto atualizado");
+    };
+
+    window.renderAccompaniments = () => {
+        const list = document.getElementById('stock-ing-list');
+        if(!list) return;
+        list.innerHTML = '';
+        const acc = state.config.accompaniments || { extras: [], ponto: [], remocoes: [] };
+        
+        const renderGroup = (title, items, type) => {
+            list.innerHTML += `<div class="bg-slate-100 p-2 rounded-lg text-[10px] font-black uppercase text-slate-500 mt-4">${title}</div>`;
+            items.forEach((item, idx) => {
+                const isAvail = item.available !== false;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl ${isAvail ? '' : 'opacity-50'}">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800">${item.name}</span>
+                            <span class="text-[10px] font-bold text-brand-600 ml-2">R$ ${(item.price||0).toFixed(2)}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="window.toggleAccAvail('${type}', ${idx})" title="On/Off" class="p-2 ${isAvail ? 'text-green-500 bg-green-50' : 'text-slate-400 bg-slate-100'} rounded-lg"><i data-lucide="${isAvail ? 'eye' : 'eye-off'}" class="w-4 h-4"></i></button>
+                            <button onclick="window.removeAcc('${type}', ${idx})" title="Deletar" class="p-2 text-red-500 bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        renderGroup("Turbine (Pagos)", acc.extras || [], "extras");
+        renderGroup("Ponto da Carne", acc.ponto || [], "ponto");
+        renderGroup("Retiradas (Sem Custo)", acc.remocoes || [], "remocoes");
+        window.refreshIcons();
+    };
+
+    window.addAcc = () => {
+        const name = document.getElementById('new-acc-name').value.trim();
+        const price = parseFloat(document.getElementById('new-acc-price').value) || 0;
+        const type = document.getElementById('new-acc-type').value;
+
+        if(!name) return window.toast("Nome do extra é obrigatório", "error");
+
+        const acc = state.config.accompaniments || { extras: [], ponto: [], remocoes: [] };
+        if(!acc[type]) acc[type] = [];
+        acc[type].push({ name, price, available: true });
+
+        window.saveConfigSafe({ accompaniments: acc });
+        document.getElementById('new-acc-name').value = '';
+        document.getElementById('new-acc-price').value = '';
+        window.toast("Extra adicionado");
+    };
+
+    window.toggleAccAvail = (type, idx) => {
+        const acc = { ...state.config.accompaniments };
+        acc[type][idx].available = acc[type][idx].available !== false ? false : true;
+        window.saveConfigSafe({ accompaniments: acc });
+    };
+
+    window.removeAcc = (type, idx) => {
+        const acc = { ...state.config.accompaniments };
+        acc[type].splice(idx, 1);
+        window.saveConfigSafe({ accompaniments: acc });
+    };
+
+    // --- Tab: Destaques (Banners) ---
+    window.renderHighlights = () => {
+        const list = document.getElementById('admin-highlights-list');
+        if(!list) return;
+        list.innerHTML = '';
+        (state.config.highlights || []).forEach((h, idx) => {
+            const hColor = h.color === 'brand' ? 'border-brand-500' : 'border-slate-300';
+            list.innerHTML += `
+               <div class="p-4 bg-white border-l-4 ${hColor} rounded-2xl shadow-sm flex items-center justify-between">
+                   <div>
+                       <span class="text-[9px] font-black uppercase text-brand-600 bg-brand-50 px-2 py-0.5 rounded">${h.badge}</span>
+                       <h4 class="text-sm font-bold text-slate-800 mt-1">${h.title}</h4>
+                       <p class="text-[10px] text-slate-500">${h.subtitle}</p>
+                   </div>
+                   <div class="flex gap-2">
+                       <button onclick="window.openEditHighlightModal(${idx})" class="p-2 text-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                       <button onclick="window.removeHighlight(${idx})" class="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                   </div>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.addHighlight = () => {
+        const h = {
+            badge: document.getElementById('new-high-badge').value.trim() || 'Destaque',
+            title: document.getElementById('new-high-title').value.trim() || 'Título',
+            subtitle: document.getElementById('new-high-sub').value.trim() || '',
+            color: document.getElementById('new-high-color').value,
+            icon: document.getElementById('new-high-icon').value
+        };
+        const highs = [...(state.config.highlights || []), h];
+        window.saveConfigSafe({ highlights: highs });
+        
+        document.getElementById('new-high-badge').value = '';
+        document.getElementById('new-high-title').value = '';
+        document.getElementById('new-high-sub').value = '';
+    };
+
+    window.removeHighlight = (idx) => {
+        const highs = [...(state.config.highlights || [])];
+        highs.splice(idx, 1);
+        window.saveConfigSafe({ highlights: highs });
+    };
+
+    window.openEditHighlightModal = (idx) => {
+        state.editingHighlightIdx = idx;
+        const h = state.config.highlights[idx];
+        document.getElementById('edit-high-badge').value = h.badge;
+        document.getElementById('edit-high-title').value = h.title;
+        document.getElementById('edit-high-sub').value = h.subtitle;
+        document.getElementById('edit-high-color').value = h.color;
+        document.getElementById('edit-high-icon').value = h.icon;
+        
+        document.getElementById('edit-high-modal').classList.remove('hidden');
+        document.getElementById('edit-high-modal').classList.add('flex');
+    };
+
+    window.closeEditHighlightModal = () => {
+        document.getElementById('edit-high-modal').classList.add('hidden');
+        document.getElementById('edit-high-modal').classList.remove('flex');
+        state.editingHighlightIdx = null;
+    };
+
+    window.saveEditedHighlight = () => {
+        if(state.editingHighlightIdx === null) return;
+        const highs = [...(state.config.highlights || [])];
+        highs[state.editingHighlightIdx] = {
+            badge: document.getElementById('edit-high-badge').value.trim(),
+            title: document.getElementById('edit-high-title').value.trim(),
+            subtitle: document.getElementById('edit-high-sub').value.trim(),
+            color: document.getElementById('edit-high-color').value,
+            icon: document.getElementById('edit-high-icon').value
+        };
+        window.saveConfigSafe({ highlights: highs });
+        window.closeEditHighlightModal();
+    };
+
+    // --- Tab: Avisos ---
+    window.renderPosts = () => {
+        const list = document.getElementById('admin-posts-list');
+        if(!list) return;
+        list.innerHTML = '';
+        (state.config.posts || []).forEach((p, idx) => {
+            list.innerHTML += `
+               <div class="p-4 bg-amber-50 border border-brand-200 rounded-2xl relative shadow-sm">
+                   <button onclick="window.removePost(${idx})" class="absolute top-2 right-2 p-1.5 text-red-500 bg-white/50 hover:bg-white rounded-md"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                   <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight">${p.title}</h4>
+                   <p class="text-xs text-slate-600 mt-1">${p.message}</p>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.addPost = () => {
+        const title = document.getElementById('post-title').value.trim();
+        const msg = document.getElementById('post-msg').value.trim();
+        if(!title || !msg) return window.toast("Preencha título e mensagem", "error");
+        
+        const posts = [{ id: Date.now(), title, message: msg, date: new Date().toISOString() }, ...(state.config.posts || [])];
+        window.saveConfigSafe({ posts });
+        
+        document.getElementById('post-title').value = '';
+        document.getElementById('post-msg').value = '';
+    };
+
+    window.removePost = (idx) => {
+        const posts = [...(state.config.posts || [])];
+        posts.splice(idx, 1);
+        window.saveConfigSafe({ posts });
+    };
+
+    // --- Tab: Entregadores ---
+    window.renderDeliverers = () => {
+        const list = document.getElementById('admin-deliverers-list');
+        if(!list) return;
+        list.innerHTML = '';
+        (state.config.deliverers || []).forEach((d, idx) => {
+            list.innerHTML += `
+               <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl">
+                   <div class="flex items-center gap-3">
+                       <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><i data-lucide="bike" class="w-5 h-5"></i></div>
+                       <div>
+                           <h4 class="text-sm font-bold text-slate-800">${d.name}</h4>
+                           <span class="text-[10px] font-bold text-slate-400">${d.phone}</span>
+                       </div>
+                   </div>
+                   <button onclick="window.removeDeliverer(${idx})" class="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.addDeliverer = () => {
+        const name = document.getElementById('new-deliverer-name').value.trim();
+        const phone = document.getElementById('new-deliverer-phone').value.trim();
+        if(!name || !phone) return window.toast("Nome e WhatsApp obrigatórios", "error");
+        
+        const deliverers = [...(state.config.deliverers || []), { name, phone: phone.replace(/\D/g, '') }];
+        window.saveConfigSafe({ deliverers });
+        document.getElementById('new-deliverer-name').value = '';
+        document.getElementById('new-deliverer-phone').value = '';
+    };
+
+    window.removeDeliverer = (idx) => {
+        const deliverers = [...(state.config.deliverers || [])];
+        deliverers.splice(idx, 1);
+        window.saveConfigSafe({ deliverers });
+    };
+
+    // --- Tab: Pedidos ---
+    window.renderOrders = () => {
+        const list = document.getElementById('admin-orders-list');
+        if(!list) return;
+        list.innerHTML = '';
+
+        if(state.orders.length === 0) {
+            list.innerHTML = `<div class="p-10 text-center text-slate-400 text-sm font-bold bg-white rounded-3xl border border-slate-100">Nenhum pedido no histórico.</div>`;
+            return;
+        }
+
+        state.orders.forEach(o => {
+            const date = new Date(o.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            let statusColor = "bg-yellow-100 text-yellow-700";
+            if(o.status === "preparando") statusColor = "bg-blue-100 text-blue-700";
+            if(o.status === "saiu") statusColor = "bg-purple-100 text-purple-700";
+            if(o.status === "finalizado") statusColor = "bg-green-100 text-green-700";
+
+            let itemsHtml = (o.items || []).map(i => `<li class="text-xs text-slate-700"><span class="font-bold border bg-slate-100 px-1 rounded mr-1">${i.qty}x</span> ${i.name} <span class="text-slate-400">R$ ${(i.price*i.qty).toFixed(2)}</span>${i.obs ? `<div class="text-[9px] text-slate-400 italic ml-6">${i.obs}</div>`:''}</li>`).join('');
+
+            list.innerHTML += `
+               <div class="bg-white border border-slate-100 p-5 rounded-[24px] shadow-sm relative animate-slide-up hover:border-brand-200 transition-all">
+                   <div class="absolute top-4 right-4">
+                       <select onchange="window.updateOrderStatus('${o.id}', this.value)" class="text-[10px] font-bold uppercase border-none rounded-lg px-2 py-1 outline-none ${statusColor}">
+                           <option value="pendente" ${o.status==='pendente'?'selected':''}>Pendente</option>
+                           <option value="preparando" ${o.status==='preparando'?'selected':''}>Preparando</option>
+                           <option value="saiu" ${o.status==='saiu'?'selected':''}>Saiu Entrega</option>
+                           <option value="finalizado" ${o.status==='finalizado'?'selected':''}>Finalizado</option>
+                       </select>
+                   </div>
+                   <h4 class="font-display text-lg font-black text-slate-900 leading-tight">${o.clientName}</h4>
+                   <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">${date} • ${o.deliveryType}</p>
+                   
+                   <div class="mt-4 bg-slate-50 border border-slate-100 p-3 rounded-xl">
+                       <ul class="space-y-1">${itemsHtml}</ul>
+                       ${o.obsGeral ? `<div class="mt-2 text-[10px] bg-amber-50 text-amber-800 p-2 rounded-lg font-medium"><span class="font-bold">OBS:</span> ${o.obsGeral}</div>` : ''}
+                   </div>
+                   
+                   <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-end w-full">
+                       <div>
+                           <p class="text-[10px] font-bold text-slate-500 uppercase">Tel: <span class="text-slate-800">${o.phone}</span></p>
+                           <p class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Pagamento: <span class="text-brand-600">${o.paymentMethod || 'A Combinar'}</span></p>
+                           <p class="text-[10px] font-bold text-slate-500 uppercase mt-1">Total: <span class="text-slate-900 text-sm font-black">${o.total}</span></p>
+                       </div>
+                       <div class="flex gap-2">
+                            <button onclick="window.printOrder('${o.id}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-[10px] uppercase transition-all flex items-center gap-1 shadow-sm"><i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir</button>
+                            ${o.deliveryType === 'Entrega' ? `<button onclick="window.openDispatchModal('${o.id}')" class="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl font-bold text-[10px] uppercase transition-all flex items-center gap-1 shadow-sm"><i data-lucide="bike" class="w-3.5 h-3.5"></i> Despachar</button>` : ''}
+                       </div>
+                   </div>
+               </div>
+            `;
+        });
+        window.refreshIcons();
+    };
+
+    window.updateOrderStatus = async (orderId, newStatus) => {
+        if(db) {
+            try {
+                await updateDoc(doc(db, "pedidos", orderId), { status: newStatus });
+            } catch(e) { window.toast("Trabalhando offline", "info"); }
+        }
+        
+        const idx = state.orders.findIndex(o => o.id === orderId);
+        if(idx > -1) {
+            state.orders[idx].status = newStatus;
+            localStorage.setItem("burger_orders_v4", JSON.stringify(state.orders));
+        }
+        window.toast("Status atualizado", "success");
+    };
+
+    window.clearAllOrders = () => {
+        if(confirm("Deseja apagar TODOS os pedidos da tela localmente? Eles não serão apagados da nuvem se existirem lá.")) {
+            state.orders = [];
+            localStorage.setItem("burger_orders_v4", "[]");
+            window.renderOrders();
+            window.toast("Limpeza efetuada");
+        }
+    };
+
+    window.openDispatchModal = (orderId) => {
+        const order = state.orders.find(o => o.id === orderId);
+        if(!order) return;
+        state.pendingDispatch = order;
+
+        const list = document.getElementById('dispatch-deliverers');
+        list.innerHTML = '';
+        if(!state.config.deliverers || state.config.deliverers.length === 0) {
+            list.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum entregador cadastrado.<br>Adicione na aba "Entregadores".</p>`;
+        } else {
+            state.config.deliverers.forEach((d) => {
+                list.innerHTML += `
+                    <button onclick="window.dispatchTo('${d.phone}')" class="w-full text-left p-4 bg-slate-50 hover:bg-brand-50 border border-slate-100 hover:border-brand-200 rounded-xl transition-all flex items-center justify-between group">
+                        <div>
+                            <span class="block font-bold text-sm text-slate-800">${d.name}</span>
+                            <span class="block text-[10px] text-slate-400">${d.phone}</span>
+                        </div>
+                        <i data-lucide="send" class="w-4 h-4 text-brand-500 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all"></i>
+                    </button>
+                `;
+            });
+        }
+        document.getElementById('dispatch-modal').classList.remove('hidden');
+        document.getElementById('dispatch-modal').classList.add('flex');
+        window.refreshIcons();
+    };
+
+    window.closeDispatchModal = () => {
+        document.getElementById('dispatch-modal').classList.add('hidden');
+        document.getElementById('dispatch-modal').classList.remove('flex');
+        state.pendingDispatch = null;
+    };
+
+    window.dispatchTo = (phoneNum) => {
+        const o = state.pendingDispatch;
+        if(!o) return;
+        
+        let msg = `🏍️ *NOVA ENTREGA - ${state.config.storeName.toUpperCase()}*\n\n`;
+        msg += `👤 *Cliente:* ${o.clientName}\n`;
+        msg += `📍 *Endereço:* ${o.address}\n`;
+        msg += `📞 *Contato:* ${o.phone}\n\n`;
+        msg += `💳 *Receber:* ${o.total} (${o.paymentMethod || 'A Combinar'})\n`;
+        if (o.obsGeral) { msg += `📝 *OBS:* ${o.obsGeral}\n`; }
+        msg += `\nBom trabalho!`;
+
+        const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+        window.closeDispatchModal();
+        window.updateOrderStatus(o.id, 'saiu');
+        window.renderOrders();
+    };
+
+    // Imprimir
+    window.printOrder = (id) => {
+        const o = state.orders.find(x => x.id === id);
+        if(!o) return;
+
+        let itemsHtml = ``;
+        (o.items || []).forEach(i => {
+           itemsHtml += `<div>${i.qty}x ${i.name.toUpperCase()} (R$ ${(i.price*i.qty).toFixed(2)})</div>`;
+           if(i.obs) itemsHtml += `<div style="padding-left:10px; font-size:10px;">-> ${i.obs}</div>`;
+        });
+
+        const printDiv = document.getElementById('print-receipt');
+        const date = new Date(o.createdAt).toLocaleString();
+        
+        printDiv.innerHTML = `
+           <div style="border-bottom: 2px dashed #000; padding-bottom:10px; text-align:center; margin-bottom:10px;">
+               <h2>${state.config.storeName.toUpperCase()}</h2>
+               <div>${date}</div>
+           </div>
+           <div style="margin-bottom:10px;">
+               <div><b>CLIENTE:</b> ${o.clientName.toUpperCase()}</div>
+               <div><b>TEL:</b> ${o.phone}</div>
+           </div>
+           <div style="border-bottom: 2px dashed #000; border-top: 2px dashed #000; padding:10px 0; margin-bottom:10px;">
+               ${itemsHtml}
+           </div>
+           <div style="margin-bottom:10px;">
+               ${o.obsGeral ? `<div><b>OBS:</b> ${o.obsGeral.toUpperCase()}</div><br>` : ''}
+               <div><b>ENTREGA:</b> ${o.deliveryType.toUpperCase()}</div>
+               ${o.deliveryType === 'Entrega' ? `<div><b>END:</b> ${o.address.toUpperCase()}</div>` : ''}
+               <div><b>PAG:</b> ${o.paymentMethod ? o.paymentMethod.toUpperCase() : 'A COMBINAR'}</div>
+           </div>
+           <div style="border-top: 2px dashed #000; padding-top:10px; font-size:14px; text-align:right;">
+               <b>TOTAL: ${o.total}</b>
+           </div>
+        `;
+
+        window.print();
+    };
+
+    window.init = () => {
+      window.loadLocalState();
+      window.initFirebase();
+      window.refreshIcons();
+    };
+
+    window.onload = window.init;
+  </script>
+</body>
+</html>
