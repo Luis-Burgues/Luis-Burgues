@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <meta property="og:title" content="Luis Burguer | Artesanais" />
+  <meta property="og:description" content="O melhor lanche da região. Peça agora!" />
+
+  <title>Luis Burguer</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;700;900&display=swap"
+    rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fefce8', 100: '#fef9c3', 200: '#fef08a', 300: '#fde047',
+              400: '#facc15', 500: '#eab308', 600: '#ca8a04', 700: '#a16207',
+              800: '#854d0e', 900: '#713f12',
+            },
+            whatsapp: {
+              500: '#25D366', 600: '#128C7E',
+            }
+          },
+          boxShadow: {
+            'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+            'glow': '0 0 20px rgba(234, 179, 8, 0.3)',
+            'whatsapp': '0 10px 25px -5px rgba(37, 211, 102, 0.4)',
+          },
+          animation: {
+            'slide-up': 'slideUp 0.4s ease-out forwards',
+            'pulse-green': 'pulse-green 2s infinite',
+            'bounce-short': 'bounceShort 1s infinite',
+          },
+          keyframes: {
+            slideUp: {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            'pulse-green': {
+              '0%': { boxShadow: '0 0 0 0 rgba(37, 211, 102, 0.7)' },
+              '70%': { boxShadow: '0 0 0 15px rgba(37, 211, 102, 0)' },
+              '100%': { boxShadow: '0 0 0 0 rgba(37, 211, 102, 0)' },
+            },
+            bounceShort: {
+              '0%, 100%': { transform: 'translateY(-5%)', animationTimingFunction: 'cubic-bezier(0.8, 0, 1, 1)' },
+              '50%': { transform: 'translateY(0)', animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #fafafa;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+
+    .product-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; animation: slideUp 0.5s ease-out forwards; }
+    .product-card:active { transform: scale(0.97); }
+    .product-card.selected { border-color: #ea580c; background: linear-gradient(to bottom right, #fffcf9, #ffedd5); box-shadow: 0 8px 30px -5px rgba(234, 88, 12, 0.2); transform: translateY(-2px); }
+
+    .news-card { background: linear-gradient(135deg, #fff, #f8fafc); border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .news-card.highlight { background: linear-gradient(135deg, #fff7ed, #ffedd5); border-color: #fed7aa; }
+
+    .check-circle { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .selected .check-circle { background-color: #ea580c; border-color: #ea580c; transform: scale(1.1) rotate(360deg); }
+    .selected .check-icon { opacity: 1; transform: scale(1); }
+
+    .spinner { border: 2px solid rgba(255, 255, 255, 0.3); border-left-color: #fff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+    .safe-pt { padding-top: env(safe-area-inset-top); }
+
+    .option-checkbox:checked+div { background-color: #ffedd5; border-color: #ea580c; color: #7c2d12; }
+    .option-checkbox:checked+div .check-icon-sm { opacity: 1; transform: scale(1); }
+  </style>
+</head>
+
+<body class="antialiased text-slate-800 bg-slate-50 overflow-x-hidden">
+
+  <!-- TOAST GLOBAL -->
+  <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[250] opacity-0 pointer-events-none transition-all duration-500 transform -translate-y-20">
+      <div class="glass px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 border border-brand-200">
+          <div id="toast-indicator" class="w-2 h-2 rounded-full shadow-sm"></div>
+          <span class="text-xs font-bold tracking-wide text-slate-800" id="toast-msg">Sucesso</span>
+      </div>
+  </div>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500">
+    <div class="relative mb-6">
+      <div class="absolute inset-0 bg-brand-500/20 blur-xl rounded-full animate-pulse"></div>
+      <div class="w-32 h-32 rounded-full bg-brand-100 flex items-center justify-center border-4 border-white shadow-2xl relative z-10 animate-bounce-short overflow-hidden text-brand-600">
+        <i data-lucide="chef-hat" class="w-16 h-16"></i>
+      </div>
+    </div>
+    <h1 class="font-display font-black text-4xl text-slate-900 tracking-tight">LUIS<span class="text-brand-600">.</span></h1>
+    <p class="text-slate-400 text-xs font-bold mt-3 tracking-widest uppercase bg-slate-100 px-3 py-1 rounded-full">A preparar a chapa</p>
+  </div>
+
+  <!-- APLICATIVO DO CLIENTE -->
+  <div class="app-container relative min-h-screen pb-32 z-10 flex flex-col items-center" id="customer-app">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 glass shadow-sm w-full safe-pt">
+      <div class="px-5 h-[72px] flex items-center justify-between max-w-lg mx-auto">
+        <!-- O TÚNEL SEGURO -->
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="try { window.location.href='admin.html'; } catch(e) { window.toast('No ambiente real, este botão abre o painel de administrador.', 'info'); }">
+          <div class="relative transition-transform group-active:scale-95">
+            <div class="w-11 h-11 rounded-full bg-slate-900 border-2 border-white shadow-md flex items-center justify-center overflow-hidden text-brand-500">
+              <i data-lucide="flame" class="w-6 h-6"></i>
+            </div>
+            <div id="status-indicator" class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-slate-300 border-2 border-white rounded-full transition-colors duration-500"></div>
+          </div>
+          <div>
+            <h1 class="font-display font-black text-xl leading-tight text-slate-900 tracking-tight uppercase" id="store-title-display">Luis Burguer</h1>
+            <div class="flex items-center gap-1">
+              <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+              <p id="status-text" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">A verificar...</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="window.toggleCart(true)"
+          class="relative p-3 rounded-2xl bg-white border border-slate-100 shadow-sm active:scale-90 text-slate-900 transition-all">
+          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+          <span id="cart-count"
+            class="absolute -top-1 -right-1 bg-brand-600 text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white transform scale-0 transition-transform shadow-sm">0</span>
+        </button>
+      </div>
+
+      <div class="px-5 pb-3 pt-1 overflow-x-auto no-scrollbar w-full max-w-lg mx-auto">
+        <div class="flex gap-2 w-max" id="category-filters">
+          <!-- Injetado via JS -->
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTEÚDO CLIENTE -->
+    <main class="px-5 pt-6 w-full max-w-lg space-y-8 flex-1">
+      <div class="w-[calc(100%+2.5rem)] -mx-5">
+        <div id="highlights-container" class="flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 pb-4 pt-1"></div>
+      </div>
+      <div id="news-feed" class="space-y-4 empty:hidden"></div>
+
+      <div class="relative group">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 group-focus-within:text-brand-600 transition-colors"></i>
+        </div>
+        <input type="text" id="search-input" onkeyup="window.renderMenu()" placeholder="O que vai pedir hoje?"
+          class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-soft text-sm font-semibold placeholder:text-slate-400 focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 outline-none transition-all">
+      </div>
+
+      <div id="products-grid" class="grid grid-cols-1 gap-4 pb-10"></div>
+
+      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <label class="flex items-center gap-2 text-xs font-black text-slate-400 uppercase mb-3 tracking-wide">
+          <i data-lucide="message-square" class="w-3.5 h-3.5 text-brand-500"></i> Observação Geral do Pedido
+        </label>
+        <textarea id="obs-input" rows="2"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:bg-white focus:ring-4 focus:ring-brand-500/10 outline-none resize-none placeholder:text-slate-400 text-slate-700 transition-all"
+          placeholder="Ex: Tocar a campainha, troco para 50..." oninput="window.saveFormData()"></textarea>
+      </div>
+    </main>
+
+    <button onclick="window.openChat()"
+      class="fixed bottom-32 right-6 z-40 w-14 h-14 bg-whatsapp-500 text-white rounded-full shadow-whatsapp flex items-center justify-center animate-pulse-green active:scale-90 transition-all">
+      <i data-lucide="message-circle" class="w-8 h-8 fill-white/10"></i>
+    </button>
+
+    <div class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-white via-white to-transparent pt-10 pointer-events-none safe-pb">
+      <div class="max-w-lg mx-auto flex items-center gap-3 pointer-events-auto">
+        <div class="bg-white h-16 px-2 rounded-2xl shadow-xl border border-slate-100 flex items-center min-w-[120px]">
+          <button onclick="window.updateQty(-1)" class="w-12 h-full flex items-center justify-center text-slate-400 active:text-brand-600 active:scale-75 transition-all text-2xl font-bold rounded-xl">-</button>
+          <span id="qty-display" class="flex-1 text-center font-display font-black text-xl text-slate-800">1</span>
+          <button onclick="window.updateQty(1)" class="w-12 h-full flex items-center justify-center text-slate-400 active:text-brand-600 active:scale-75 transition-all text-2xl font-bold rounded-xl">+</button>
+        </div>
+        <button onclick="window.addToCart()" id="btn-add" class="flex-1 h-16 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-between px-6 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale group" disabled>
+          <span class="text-xs font-black uppercase tracking-widest transition-all">Adicionar</span>
+          <span id="price-display" class="font-display font-bold text-lg bg-white/10 px-2 py-1 rounded-lg">R$ 0,00</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARRINHO CLIENTE -->
+  <div id="cart-backdrop" class="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm invisible opacity-0 transition-all duration-300" onclick="window.toggleCart(false)"></div>
+  <div id="cart-drawer" class="fixed top-0 right-0 bottom-0 z-[70] w-full max-w-md bg-white shadow-2xl translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="px-6 py-6 border-b border-slate-50 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-10 safe-pt">
+      <div>
+        <h2 class="font-display font-black text-2xl text-slate-900 tracking-tight">O Seu Pedido</h2>
+        <p class="text-xs text-slate-400 font-medium">Confirme os itens antes de fechar</p>
+      </div>
+      <button onclick="window.toggleCart(false)" class="p-3 bg-slate-50 active:bg-slate-100 rounded-full transition-colors"><i data-lucide="x" class="w-6 h-6 text-slate-500"></i></button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 no-scrollbar">
+      <div id="cart-items" class="space-y-4"></div>
+
+      <div id="checkout-form" class="hidden space-y-6 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div class="space-y-4">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><i data-lucide="user" class="w-4 h-4 text-brand-500"></i> Os Seus Dados</h3>
+          <div class="space-y-3">
+            <input id="client-name" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold border-2 border-transparent focus:border-brand-500/20 focus:bg-white outline-none transition-all" placeholder="Nome Completo" oninput="window.saveFormData(); window.validateCheckout()">
+            <input id="client-phone" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold border-2 border-transparent focus:border-brand-500/20 focus:bg-white outline-none transition-all" placeholder="Telemóvel (WhatsApp)" maxlength="15">
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-brand-500"></i> Entrega</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="window.setDelivery('Retirada')" id="btn-retirada" class="p-4 border-2 border-slate-100 rounded-2xl text-xs font-black text-slate-400 active:bg-slate-50 transition-all uppercase tracking-wide">Retirada</button>
+            <button onclick="window.setDelivery('Entrega')" id="btn-entrega" class="p-4 border-2 border-slate-100 rounded-2xl text-xs font-black text-slate-400 active:bg-slate-50 transition-all uppercase tracking-wide">Entrega</button>
+          </div>
+          <div id="delivery-details" class="hidden space-y-3 animate-slide-up">
+            <select id="delivery-zone" class="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-brand-500 transition-colors" onchange="window.renderCart(); window.saveFormData()"></select>
+            <textarea id="client-address" rows="2" class="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium outline-none resize-none focus:border-brand-500 transition-colors" placeholder="Morada completa (Rua, Nº, Freguesia, Ref)" oninput="window.saveFormData(); window.validateCheckout()"></textarea>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><i data-lucide="credit-card" class="w-4 h-4 text-brand-500"></i> Pagamento</h3>
+          <select id="payment-method" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold border-2 border-transparent focus:bg-white focus:border-brand-500/20 outline-none transition-all" onchange="window.handlePaymentChange(); window.saveFormData()">
+            <option value="" disabled selected>Forma de pagamento...</option>
+            <option value="Pix">MBWay / Pix</option>
+            <option value="Dinheiro">Dinheiro (Precisa de troco?)</option>
+            <option value="Cartão">Cartão na Entrega (TPA)</option>
+          </select>
+          <div id="pix-area" class="hidden bg-brand-50 p-5 rounded-3xl border border-brand-100 text-center animate-slide-up">
+            <p class="text-[10px] font-black text-brand-900 uppercase mb-1 tracking-widest" id="pix-name-display">Titular</p>
+            <p class="text-[10px] font-black text-brand-900 uppercase mb-3 tracking-widest">Chave (MBWay/Pix)</p>
+            <div class="flex gap-2 mb-4">
+              <input id="pix-key" readonly class="flex-1 text-[10px] text-center p-3 rounded-xl bg-white border border-brand-100 text-slate-500 outline-none font-mono">
+              <button onclick="window.copyPix()" class="p-3 bg-brand-600 text-white rounded-xl active:bg-brand-700 transition-colors shadow-lg"><i data-lucide="copy" class="w-4 h-4"></i></button>
+            </div>
+            <p class="text-[10px] text-slate-500 font-medium">Copie a chave e envie o comprovativo no WhatsApp ao finalizar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-slate-100 bg-white z-20 shadow-[0_-10px_60px_-15px_rgba(0,0,0,0.1)] safe-pb">
+      <div class="flex justify-between items-end mb-5">
+        <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Total Geral</span>
+        <span id="cart-total" class="text-3xl font-display font-black text-slate-900 tracking-tight">R$ 0,00</span>
+      </div>
+      <button onclick="window.sendOrder()" id="btn-checkout" class="w-full py-5 rounded-2xl bg-gradient-to-r from-whatsapp-500 to-whatsapp-600 text-white font-black text-sm shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale" disabled>
+        <div class="relative z-10 flex items-center gap-2"><i data-lucide="message-circle" class="w-6 h-6 fill-white/20"></i><span>Enviar Pedido pelo WhatsApp</span></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL CUSTOMIZAÇÃO CLIENTE -->
+  <div id="custom-modal" class="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-md hidden flex flex-col justify-end sm:justify-center transition-all">
+    <div class="bg-white w-full max-w-lg mx-auto h-[85vh] sm:h-auto sm:max-h-[90vh] sm:rounded-[2rem] rounded-t-[2.5rem] shadow-2xl flex flex-col relative animate-slide-up">
+      <div class="px-6 py-5 border-b border-slate-50 flex items-center justify-between bg-white rounded-t-[2.5rem] sticky top-0 z-10">
+        <div>
+          <h3 class="font-display font-black text-xl text-slate-900 uppercase tracking-tight" id="custom-modal-title">Personalizar</h3>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Deixe ao seu gosto</p>
+        </div>
+        <button onclick="window.closeCustomModal()" class="p-2 bg-slate-50 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar" id="custom-options-container"></div>
+      <div class="p-6 border-t border-slate-100 bg-white sm:rounded-b-[2rem] safe-pb">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center bg-slate-100 rounded-xl h-12 px-1">
+            <button onclick="window.updateCustomQty(-1)" class="w-10 h-full flex items-center justify-center text-slate-500 font-bold text-lg active:scale-90 transition-transform">-</button>
+            <span id="custom-qty-display" class="w-8 text-center font-display font-bold text-lg text-slate-800">1</span>
+            <button onclick="window.updateCustomQty(1)" class="w-10 h-full flex items-center justify-center text-slate-500 font-bold text-lg active:scale-90 transition-transform">+</button>
+          </div>
+          <div class="text-right">
+            <span class="block text-[10px] font-bold text-slate-400 uppercase">Valor Unidade</span>
+            <span id="custom-total-price" class="font-display font-black text-2xl text-brand-600">R$ 0,00</span>
+          </div>
+        </div>
+        <button onclick="window.addCustomToCart()" class="w-full py-4 bg-brand-600 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+          <span>Adicionar Personalizado</span><i data-lucide="check" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, getDocs, writeBatch, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==========================================
+    // ESTADO E DADOS PADRÃO (LUIS BURGUER)
+    // ==========================================
+    const DEFAULT_CATEGORIES = [
+        { id: "Tradicionais", name: "TRADICIONAIS" },
+        { id: "Bacon", name: "LANCHES DE BACON" },
+        { id: "Frango", name: "LANCHES DE FRANGO" },
+        { id: "Toscana", name: "LANCHES DE TOSCANA" },
+        { id: "Calabresa", name: "LANCHES DE CALABRESA" },
+        { id: "Coração", name: "LANCHES DE CORAÇÃO" },
+        { id: "Carne do Sol", name: "CARNE DO SOL" },
+        { id: "Charque", name: "CHARQUE" },
+        { id: "Picanha", name: "PICANHA" },
+        { id: "Cachorro Quente", name: "CACHORRO QUENTE" },
+        { id: "Combos", name: "COMBOS" },
+        { id: "Bebidas", name: "BEBIDAS" }
+    ];
+    
+    const DEFAULT_ITEMS = [
+      { name: "Hambúrguer", description: "(Pão, carne, salada, milho e batata palha)", price: 8.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Misto", description: "(Pão, mussarela e presunto)", price: 7.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Americano", description: "(Pão, ovo, mussarela, presunto, salada, milho e batata palha)", price: 10.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luizinho", description: "(Pão, frango, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "X-Burguer", description: "(Pão, carne, mussarela, presunto, salada, milho e batata palha)", price: 11.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Burguer Cheddar", description: "(Pão, carne, cheddar, salada, milho e batata palha)", price: 10.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Eggs Burguer", description: "(Pão, carne, ovo, mussarela, presunto, salada, milho e batata palha)", price: 12.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Eggs Cheddar", description: "(Pão, carne, mussarela, presunto, ovo, cheddar, salada, milho e batata palha)", price: 13.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Super Burguer", description: "(Pão, 2 carne, 2 ovos, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Frango", description: "(Pão, 2 carne, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 18.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Calabresa", description: "(Pão, 2 carne, ovo, calabresa, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Bacon", description: "(Pão, 2 carne, ovo, bacon, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Coração", description: "(Pão, 2 carne, ovo, coração, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Toscana", description: "(Pão, 2 carne, ovo, toscana, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "X-Tudo", description: "(Pão, carne, ovo, frango, calabresa, bacon, coração, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial", description: "(Pão, 2 carne, 2 ovo, frango, calabresa, bacon, coração, 2 mussarela, 2 presunto, salada, milho e batata palha)", price: 24.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Super Luis", description: "(Pão, 2 carne, cheddar, frango, calabresa, bacon, coração, toscana, 2 mussarela, 2 presunto, salada, milho e batata palha)", price: 30.00, category: "Tradicionais", customizable: true, available: true },
+
+      // LANCHES DE BACON
+      { name: "X-Bacon", description: "(Pão, carne, bacon, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Bacon", customizable: true, available: true },
+      { name: "Eggs Bacon", description: "(Pão, carne, bacon, ovo, mussarela, presunto, salada, milho e batata palha)", price: 18.00, category: "Bacon", customizable: true, available: true },
+      { name: "Bacon Especial", description: "(Pão, carne, bacon, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Bacon", customizable: true, available: true },
+
+      // LANCHES DE FRANGO
+      { name: "X-Frango", description: "(Pão, carne, frango, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Frango", customizable: true, available: true },
+      { name: "Eggs Frango", description: "(Pão, carne, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Frango", customizable: true, available: true },
+      { name: "Frango Especial", description: "(Pão, carne, frango, calabresa, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Frango", customizable: true, available: true },
+
+      // LANCHES DE TOSCANA
+      { name: "X-Toscana", description: "(Pão, carne, toscana, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Toscana", customizable: true, available: true },
+      { name: "Eggs Toscana", description: "(Pão, carne, toscana, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Toscana", customizable: true, available: true },
+      { name: "Toscana Especial", description: "(Pão, carne, toscana, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Toscana", customizable: true, available: true },
+
+      // LANCHES DE CALABRESA
+      { name: "X-Calabresa", description: "(Pão, carne, calabresa, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Calabresa", customizable: true, available: true },
+      { name: "Eggs Calabresa", description: "(Pão, carne, calabresa, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Calabresa", customizable: true, available: true },
+      { name: "Calabresa Especial", description: "(Pão, carne, calabresa, bacon, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Calabresa", customizable: true, available: true },
+
+      // LANCHES DE CORAÇÃO
+      { name: "X-Coração", description: "(Pão, carne, coração, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Coração", customizable: true, available: true },
+      { name: "Eggs Coração", description: "(Pão, carne, coração, ovo, mussarela, presunto, salada, milho e batata palha)", price: 17.00, category: "Coração", customizable: true, available: true },
+      { name: "Coração Especial", description: "(Pão, carne, coração, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Coração", customizable: true, available: true },
+
+      // CARNE DO SOL
+      { name: "X-Carne do Sol", description: "(Pão, carne, carne do sol, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Carne do Sol", customizable: true, available: true },
+      { name: "Eggs Carne do Sol", description: "(Pão, carne, carne do sol, ovo, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Carne do Sol", customizable: true, available: true },
+      { name: "Carne do Sol Especial", description: "(Pão, carne, carne do sol, creme cheese, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 25.00, category: "Carne do Sol", customizable: true, available: true },
+
+      // CHARQUE
+      { name: "X-Charque", description: "(Pão, carne, charque, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Charque", customizable: true, available: true },
+      { name: "Eggs Charque", description: "(Pão, carne, charque, ovo, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Charque", customizable: true, available: true },
+      { name: "Charque Especial", description: "(Pão, carne, charque, frango, creme cheese, ovo, mussarela, presunto, salada, milho e batata palha)", price: 25.00, category: "Charque", customizable: true, available: true },
+
+      // PICANHA
+      { name: "X-Picanha", description: "(Pão, carne de picanha, salada, milho e batata palha)", price: 14.00, category: "Picanha", customizable: true, available: true },
+      { name: "Eggs Picanha", description: "(Pão, carne de picanha, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Picanha", customizable: true, available: true },
+      { name: "Super Picanha", description: "(Pão, 2 carne de picanha, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Picanha", customizable: true, available: true },
+      { name: "Picanha Especial", description: "(Pão, carne de picanha, ovo, bacon, frango, mussarela, presunto, salada, milho e batata palha)", price: 24.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Bacon", description: "(Pão, carne de picanha, ovo, bacon, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Frango", description: "(Pão, carne de picanha, ovo, frango, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Cheddar", description: "(Pão, carne de picanha, cheddar, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Picanha", customizable: true, available: true },
+
+      // CACHORRO QUENTE
+      { name: "Cachorro Quente Tradicional", description: "(Pão, salsicha, verduras, catupiry, alface, queijo ralado e batata palha)", price: 10.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Frango", description: "(Pão, salsicha, verduras, frango, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Bacon", description: "(Pão, salsicha, verduras, bacon, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Calabresa", description: "(Pão, salsicha, verduras, calabresa, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente Especial", description: "(Pão, salsicha, verduras, frango, bacon, calabresa, catupiry, cheddar, alface, queijo ralado e batata palha)", price: 21.00, category: "Cachorro Quente", customizable: true, available: true },
+
+      // COMBOS
+      { name: "Combo 1", description: "(3 X-Burguer e 1 Refrigerante de 1L)", price: 35.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 2", description: "(3 Eggs Burguer + 1 Refrigerante 1L)", price: 38.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 3", description: "(4 Eggs Burguer + 1 Refrigerante 1L)", price: 46.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 4", description: "(2 X-Calabresa e 1 Refrigerante de 1L)", price: 40.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 5", description: "(5 X-Burguer e 1 Refrigerante de 1L)", price: 55.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 6", description: "(2 X-Tudo e 1 Refrigerante de 1L)", price: 47.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 7", description: "(2 Cachorro Quente Tradicionais e 1 Refrigerante de 1L)", price: 25.00, category: "Combos", customizable: false, available: true },
+
+      // BEBIDAS
+      { name: "Suco de Poupa C/ Leite", description: "(Goiaba, Graviola, Manga, Mangaba, Tamarindo, Ameixa, Umbu, Acerola, Maracujá, Morango)", price: 6.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Suco de Poupa S/ Leite", description: "(Goiaba, Graviola, Manga, Mangaba, Tamarindo, Ameixa, Umbu, Acerola, Maracujá, Morango)", price: 6.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Bomba Baiana", description: "(Morango ou Açaí)", price: 7.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Coca Cola 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Fanta 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Guaraná 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Goob 1L", description: "Refrigerante 1L", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Coca Cola Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Guaraná Antarctica Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Fanta Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Sprite Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true }
+    ];
+
+    const DEFAULT_ACCOMPANIMENTS = {
+      extras: [
+        { name: "Hambúrguer Extra", price: 4.00, available: true },
+        { name: "Ovo Frito", price: 2.00, available: true },
+        { name: "Bacon Extra", price: 4.00, available: true },
+        { name: "Salsicha Extra", price: 2.00, available: true },
+        { name: "Cheddar Extra", price: 3.00, available: true }
+      ],
+      ponto: [
+        { name: "Ponto da Casa", price: 0, available: true }
+      ],
+      remocoes: [
+        { name: "Sem Verduras (Salada/Alface/Tomate)", price: 0, available: true },
+        { name: "Sem Milho", price: 0, available: true },
+        { name: "Sem Batata Palha", price: 0, available: true }
+      ]
+    };
+
+    const DEFAULT_HIGHLIGHTS = [
+      { badge: 'O Melhor', title: 'Luis Especial', subtitle: 'A nossa principal especialidade!', icon: 'star', color: 'brand' }
+    ];
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLRyB1IJOrX39HPQqDh-0ZPtsHG3dCJ68",
+      authDomain: "hamburguerialuis.firebaseapp.com",
+      projectId: "hamburguerialuis",
+      storageBucket: "hamburguerialuis.firebasestorage.app",
+      messagingSenderId: "997551253361",
+      appId: "1:997551253361:web:657e42fcaa1e72980e38d0",
+      measurementId: "G-9Q81SN4LKJ"
+    };
+
+    let app, db, auth;
+    let listenersActive = false;
+
+    let state = {
+      cart: [],
+      config: {
+        storeName: "Luis Burguer",
+        phone: "5579988486097",
+        statusMode: "open",
+        openingHours: { start: 18, end: 23 },
+        sizes: DEFAULT_ITEMS,
+        accompaniments: DEFAULT_ACCOMPANIMENTS,
+        highlights: DEFAULT_HIGHLIGHTS,
+        posts: [{ id: 1, title: 'Seja bem-vindo ao Luis Burguer!', message: 'O melhor lanche da região. Faça já o seu pedido!', date: new Date().toISOString() }],
+        pixKey: "",
+        pixName: "Titular",
+        zones: [{ name: "Retirada no Local", price: 0.00 }, { name: "Taxa de Entrega (Consultar)", price: 5.00 }],
+        categories: DEFAULT_CATEGORIES
+      },
+      selectedItems: new Set(),
+      qty: 1,
+      filter: "Tradicionais",
+      deliveryType: "Retirada",
+      currentItem: null,
+      customQty: 1
+    };
+
+    window.initFirebase = async () => {
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    startDatabaseListeners();
+                }
+            });
+
+            try {
+                await signInAnonymously(auth);
+            } catch (authError) {
+                console.warn("Aviso Firebase: Autenticação Anónima não está configurada na consola do Firebase.", authError.message);
+                startDatabaseListeners(); 
+            }
+
+        } catch (e) {
+            console.error("Erro crítico ao inicializar o Firebase. A regressar ao modo local estrito:", e);
+            startDatabaseListeners();
+        }
+    };
+
+    const startDatabaseListeners = () => {
+        if (listenersActive) return;
+        listenersActive = true;
+
+        try {
+            onSnapshot(doc(db, 'loja', 'configuracoes'), (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    state.config = { ...state.config, ...data };
+                    localStorage.setItem("burger_config_v4", JSON.stringify(state.config));
+                    
+                    window.renderMenu();
+                    window.renderPosts();
+                    window.renderHighlights();
+                    window.updateUI();
+                    window.renderCategories();
+                }
+            }, (error) => {
+                console.warn("Leitura em tempo real (Configurações) indisponível ou bloqueada (Apenas acesso local).");
+            });
+        } catch(e) {}
+    };
+
+    window.loadLocalConfig = () => {
+      try {
+        const saved = localStorage.getItem("burger_config_v4");
+        if (saved) {
+          const cfg = JSON.parse(saved);
+          state.config = { ...state.config, ...cfg };
+        }
+        if (!state.config.accompaniments) state.config.accompaniments = DEFAULT_ACCOMPANIMENTS;
+        if (!state.config.posts) state.config.posts = [];
+        if (!state.config.highlights || state.config.highlights.length === 0) state.config.highlights = DEFAULT_HIGHLIGHTS;
+        if (!state.config.sizes || state.config.sizes.length === 0) state.config.sizes = DEFAULT_ITEMS;
+        if (!state.config.zones) state.config.zones = [];
+        if (!state.config.categories || state.config.categories.length === 0) state.config.categories = DEFAULT_CATEGORIES;
+        if (!state.filter || state.filter === "Todos") state.filter = (state.config.categories[0].id || state.config.categories[0]);
+      } catch (e) { console.error("Erro ao carregar config local", e); }
+    };
+
+    function saveCart() { localStorage.setItem('burger_cart_v4', JSON.stringify(state.cart)); }
+
+    window.toast = (m, type = 'success') => {
+      const el = document.getElementById('toast');
+      const icon = document.getElementById('toast-indicator');
+      document.getElementById('toast-msg').innerText = m;
+      
+      if(type === 'error'){
+         icon.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
+      } else if (type === 'info') {
+         icon.className = 'w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]';
+      } else {
+         icon.className = 'w-2 h-2 rounded-full bg-brand-500 shadow-[0_0_8px_#f97316]';
+      }
+
+      el.classList.remove('-translate-y-20', 'opacity-0');
+      el.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        el.classList.remove('translate-y-0', 'opacity-100');
+        el.classList.add('-translate-y-20', 'opacity-0');
+      }, 3500);
+    };
+
+    window.refreshIcons = () => { if (typeof lucide !== 'undefined') lucide.createIcons(); };
+
+    window.openChat = () => {
+      const msg = "Olá! Gostaria de tirar uma dúvida.";
+      window.open(`https://api.whatsapp.com/send?phone=${state.config.phone.replace(/\D/g, '')}&text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    window.isStoreOpen = () => {
+      if (state.config.statusMode === 'open') return true;
+      if (state.config.statusMode === 'closed') return false;
+
+      const h = new Date().getHours();
+      const start = parseInt(state.config.openingHours?.start) || 0;
+      const end = parseInt(state.config.openingHours?.end) || 23;
+
+      if (start < end) return h >= start && h < end;
+      else if (start > end) return h >= start || h < end;
+      return false;
+    };
+
+    window.updateUI = () => {
+      const isOpen = window.isStoreOpen();
+      const stDot = document.getElementById('status-indicator');
+      const stTxt = document.getElementById('status-text');
+      const titleDisplays = document.querySelectorAll('#store-title-display');
+
+      titleDisplays.forEach(el => el.innerText = state.config.storeName);
+
+      if (stDot) stDot.className = `absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-slate-900 rounded-full ${isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`;
+      if (stTxt) {
+        stTxt.innerText = isOpen ? "Aberto Agora" : "Fechado";
+        stTxt.className = `text-[10px] font-bold uppercase tracking-wider ${isOpen ? 'text-green-600' : 'text-red-500'}`;
+      }
+      window.validateCheckout();
+    };
+
+    window.renderCategories = () => {
+      const container = document.getElementById('category-filters');
+      if(!container) return;
+      container.innerHTML = "";
+      
+      const cats = state.config.categories || DEFAULT_CATEGORIES;
+      cats.forEach(catObj => {
+         const catId = typeof catObj === 'string' ? catObj : catObj.id;
+         const catName = typeof catObj === 'string' ? catObj : catObj.name;
+         
+         const isActive = state.filter === catId;
+         const btnClass = isActive 
+            ? "cat-btn active px-6 py-2.5 rounded-full text-xs font-black bg-slate-900 text-brand-400 shadow-lg whitespace-nowrap active:scale-95 transition-all uppercase tracking-wide border border-slate-800"
+            : "cat-btn px-6 py-2.5 rounded-full text-xs font-black bg-white text-slate-500 border border-slate-200 whitespace-nowrap active:scale-95 transition-all uppercase tracking-wide";
+         
+         container.innerHTML += `<button onclick="window.filterCategory('${catId}')" class="${btnClass}">${catName}</button>`;
+      });
+    };
+
+    window.filterCategory = (cat) => {
+      state.filter = cat;
+      window.renderCategories();
+      window.renderMenu();
+    };
+
+    window.renderHighlights = () => {
+      const container = document.getElementById('highlights-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const highlights = state.config.highlights || [];
+      if (highlights.length === 0) {
+        container.parentElement.classList.add('hidden');
+        return;
+      }
+      container.parentElement.classList.remove('hidden');
+
+      const colorMap = {
+        'brand': { bg: 'from-brand-600 to-orange-800', badgeText: 'text-brand-700' },
+        'red': { bg: 'from-red-500 to-rose-800', badgeText: 'text-red-600' },
+        'yellow': { bg: 'from-amber-400 to-orange-500', badgeText: 'text-amber-600' },
+        'dark': { bg: 'from-slate-800 to-slate-900', badgeText: 'text-slate-800'}
+      };
+
+      highlights.forEach((h) => {
+        const c = colorMap[h.color || 'brand'];
+        container.innerHTML += `
+          <div class="relative w-[85%] sm:w-[280px] shrink-0 snap-center h-44 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-900/10 group cursor-pointer active:scale-[0.98] transition-transform" onclick="window.filterCategory('${state.config.categories[0]?.id || 'Todos'}')">
+              <div class="absolute inset-0 bg-gradient-to-br ${c.bg}"></div>
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
+              
+              <div class="absolute top-4 left-4 bg-white ${c.badgeText} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
+                  <i data-lucide="${h.icon}" class="w-3.5 h-3.5 ${h.icon === 'star' ? 'fill-current' : ''}"></i> ${h.badge}
+              </div>
+              
+              <div class="absolute bottom-5 left-5 right-5 text-white">
+                  <h3 class="font-display font-black text-2xl leading-tight mb-1 drop-shadow-md uppercase tracking-tight">${h.title}</h3>
+                  <p class="text-[11px] text-white/80 font-medium drop-shadow-sm">${h.subtitle}</p>
+              </div>
+          </div>
+        `;
+      });
+      window.refreshIcons();
+    };
+
+    window.renderPosts = () => {
+      const feed = document.getElementById('news-feed');
+      if (!feed) return;
+      feed.innerHTML = "";
+      const posts = state.config.posts || [];
+      if (posts.length === 0) {
+        feed.classList.add('hidden');
+        return;
+      }
+      feed.classList.remove('hidden');
+      posts.forEach(post => {
+        feed.innerHTML += `
+          <div class="news-card highlight p-4 rounded-[20px] flex flex-col gap-3 animate-slide-up border-brand-200">
+              <div class="flex gap-4">
+                  <div class="w-12 h-12 rounded-full bg-white border border-brand-100 flex items-center justify-center text-brand-500 shadow-sm shrink-0">
+                      <i data-lucide="megaphone" class="w-6 h-6"></i>
+                  </div>
+                  <div class="flex-1">
+                      <h3 class="font-display font-black text-slate-800 text-sm leading-tight uppercase tracking-tight">${post.title}</h3>
+                      <p class="text-xs text-slate-600 mt-1 leading-relaxed font-medium">${post.message}</p>
+                      <p class="text-[9px] text-brand-500 mt-2 font-bold uppercase tracking-widest">Aviso da Loja</p>
+                  </div>
+              </div>
+          </div>
+        `;
+      });
+      window.refreshIcons();
+    };
+
+    window.renderMenu = () => {
+      const grid = document.getElementById('products-grid');
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      const term = (document.getElementById('search-input')?.value || "").toLowerCase();
+
+      let items = (state.config.sizes || []).filter(item => item.available !== false);
+      
+      if(state.filter){
+         items = items.filter(i => i.category === state.filter);
+      }
+      
+      if(term){
+         items = items.filter(i => i.name.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
+      }
+
+      if (items.length === 0) {
+        grid.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm font-bold">Nenhum item encontrado nesta aba.</div>`;
+        return;
+      }
+
+      items.forEach((item, idx) => {
+        const isSel = state.selectedItems.has(item.name);
+        const div = document.createElement('div');
+        div.style.animationDelay = `${idx * 0.05}s`;
+        div.className = `product-card bg-white p-4 rounded-[24px] border border-slate-100 flex items-center gap-4 cursor-pointer select-none relative overflow-hidden ${isSel ? 'selected' : ''}`;
+
+        div.onclick = () => {
+          if (item.customizable) {
+            window.openCustomModal(item);
+          } else {
+            window.toggleSelection(item.name);
+          }
+        };
+
+        let icon = 'beef';
+        let colorClass = 'text-brand-600 bg-brand-50';
+        
+        if (item.category === 'Bebidas') { icon = 'cup-soda'; colorClass = 'text-blue-500 bg-blue-50'; }
+        else if (item.category === 'Cachorro Quente') { icon = 'hot-dog'; colorClass = 'text-red-500 bg-red-50'; }
+        else if (item.category === 'Combos') { icon = 'package'; colorClass = 'text-purple-500 bg-purple-50'; }
+
+        div.innerHTML = `
+          <div class="relative w-[72px] h-[72px] rounded-2xl ${colorClass} flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+            ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover relative z-10" />` : `<i data-lucide="${icon}" class="w-8 h-8 relative z-10"></i>`}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-start">
+              <div class="pr-2">
+                <h3 class="font-bold text-slate-800 text-sm leading-tight">${item.name}</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-2 leading-tight">${item.description}</p>
+              </div>
+              ${!item.customizable 
+                 ? `<div class="check-circle w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center shrink-0 ml-2 ${isSel ? 'bg-brand-600 border-brand-600' : 'bg-white'}"><i data-lucide="check" class="check-icon w-3.5 h-3.5 text-white transition-all duration-300 ${isSel ? 'opacity-100 scale-100' : 'opacity-0 scale-50'} stroke-[3]"></i></div>`
+                 : `<div class="w-6 h-6 flex items-center justify-center shrink-0 ml-2 text-brand-300 bg-brand-50 rounded-full"><i data-lucide="plus" class="w-4 h-4"></i></div>`
+              }
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <span class="font-display font-black text-slate-900">R$ ${(item.price || 0).toFixed(2).replace('.', ',')}</span>
+            </div>
+          </div>`;
+        grid.appendChild(div);
+      });
+      window.refreshIcons();
+    };
+
+    window.toggleSelection = (name) => {
+      if (state.selectedItems.has(name)) state.selectedItems.delete(name);
+      else state.selectedItems.add(name);
+      window.renderMenu();
+      window.updateTotalBar();
+    };
+
+    window.updateQty = (d) => {
+      state.qty = Math.max(1, state.qty + d);
+      document.getElementById('qty-display').innerText = state.qty;
+      window.updateTotalBar();
+    };
+
+    window.updateTotalBar = () => {
+      let total = 0;
+      (state.config.sizes || []).forEach(i => { if (state.selectedItems.has(i.name)) total += i.price; });
+      const final = total * state.qty;
+      const priceDisplay = document.getElementById('price-display');
+      if (priceDisplay) priceDisplay.innerText = `R$ ${final.toFixed(2).replace('.', ',')}`;
+      const btn = document.getElementById('btn-add');
+      
+      if (btn) {
+        if (final > 0) {
+          btn.disabled = false;
+          btn.classList.replace('bg-slate-900', 'bg-brand-600');
+        } else {
+          btn.disabled = true;
+          btn.classList.replace('bg-brand-600', 'bg-slate-900');
+        }
+      }
+    };
+
+    window.addToCart = () => {
+      if (state.selectedItems.size === 0) return window.toast("Selecione um item!", "error");
+      
+      (state.config.sizes || []).forEach(i => {
+        if (state.selectedItems.has(i.name)) {
+          const idx = state.cart.findIndex(c => c.name === i.name && !c.obs);
+          if (idx > -1) state.cart[idx].qty += state.qty;
+          else state.cart.push({ id: Date.now() + Math.random(), name: i.name, price: i.price, obs: "", qty: state.qty });
+        }
+      });
+
+      state.selectedItems.clear();
+      state.qty = 1;
+      document.getElementById('qty-display').innerText = "1";
+      
+      window.renderMenu();
+      window.updateTotalBar();
+      saveCart();
+      window.renderCart();
+      window.toast("Adicionado ao Carrinho!");
+      setTimeout(() => window.toggleCart(true), 300);
+    };
+
+    window.openCustomModal = (item) => {
+      state.currentItem = item;
+      state.customQty = 1;
+      document.getElementById('custom-modal-title').innerText = item.name;
+      document.getElementById('custom-qty-display').innerText = "1";
+      window.updateCalcCustomTotal();
+
+      const container = document.getElementById('custom-options-container');
+      container.innerHTML = "";
+
+      const renderSection = (title, options, type, inputType = "checkbox") => {
+         let html = `<div class="mb-6"><h4 class="text-sm font-black text-slate-800 uppercase mb-3 flex items-center gap-2"><div class="w-1.5 h-4 bg-brand-500 rounded-full"></div>${title}</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">`;
+         
+         const availableOptions = (options || []).filter(o => o.available !== false);
+         
+         if (availableOptions.length === 0) {
+            html += `<p class="text-xs text-slate-400 italic p-2">Sem opções disponíveis.</p>`;
+         } else {
+            availableOptions.forEach((opt, idx) => {
+               const price = parseFloat(opt.price) || 0;
+               const priceLabel = price > 0 ? `<span class="text-[10px] text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded font-black ml-2">+ R$ ${price.toFixed(2).replace('.', ',')}</span>` : '';
+               const inputName = inputType === 'radio' ? `name="radio_${type}"` : '';
+               const isChecked = (inputType === 'radio' && idx === 0) ? 'checked' : '';
+               
+               html += `
+                  <label class="cursor-pointer relative group flex-1">
+                     <input type="${inputType}" ${inputName} class="option-checkbox hidden custom-opt-${type}" value="${opt.name}" data-price="${price}" onchange="window.updateCalcCustomTotal()" ${isChecked}>
+                     <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl transition-all hover:bg-white hover:shadow-sm flex items-center justify-between">
+                           <div class="flex items-center min-w-0 pr-2 flex-1">
+                              <span class="text-xs font-bold text-slate-600 truncate">${opt.name}</span>
+                              ${priceLabel}
+                           </div>
+                           <div class="w-4 h-4 shrink-0 rounded-full border border-slate-300 flex items-center justify-center bg-white group-active:scale-90 relative">
+                              <i data-lucide="check" class="check-icon-sm w-3 h-3 text-brand-600 opacity-0 transform scale-50 transition-all stroke-[4] absolute"></i>
+                           </div>
+                     </div>
+                  </label>
+               `;
+            });
+         }
+         html += `</div></div>`;
+         return html;
+      };
+
+      const acc = state.config.accompaniments || { extras: [], ponto: [], remocoes: [] };
+      container.innerHTML += renderSection("Ponto da Carne", acc.ponto, "ponto", "radio");
+      container.innerHTML += renderSection("Turbine seu Lanche", acc.extras, "extras", "checkbox");
+      container.innerHTML += renderSection("Retirar Ingredientes", acc.remocoes, "remocoes", "checkbox");
+
+      document.getElementById('custom-modal').classList.remove('hidden');
+      window.refreshIcons();
+      window.updateCalcCustomTotal();
+    };
+
+    window.closeCustomModal = () => {
+      document.getElementById('custom-modal').classList.add('hidden');
+      state.currentItem = null;
+    };
+
+    window.updateCalcCustomTotal = () => {
+      if (!state.currentItem) return;
+      let extrasTotal = 0;
+      const checkboxes = document.querySelectorAll('.option-checkbox:checked');
+      checkboxes.forEach(cb => { extrasTotal += parseFloat(cb.getAttribute('data-price')) || 0; });
+      const basePrice = state.currentItem.price || 0;
+      const totalUnit = basePrice + extrasTotal;
+      const total = totalUnit * state.customQty;
+
+      state.currentItemUnitFinalPrice = totalUnit;
+      document.getElementById('custom-total-price').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    };
+
+    window.updateCustomQty = (d) => {
+      state.customQty = Math.max(1, state.customQty + d);
+      document.getElementById('custom-qty-display').innerText = state.customQty;
+      window.updateCalcCustomTotal();
+    };
+
+    window.addCustomToCart = () => {
+      if (!state.currentItem) return;
+      const checkboxes = document.querySelectorAll('.option-checkbox:checked');
+      let details = [];
+      checkboxes.forEach(cb => {
+         const price = parseFloat(cb.getAttribute('data-price')) || 0;
+         details.push(price > 0 ? `${cb.value} (+R$ ${price.toFixed(2).replace('.', ',')})` : cb.value);
+      });
+
+      let obsText = details.length > 0 ? `Detalhes: ${details.join(', ')}` : "";
+      let finalPrice = state.currentItemUnitFinalPrice || state.currentItem.price;
+
+      const idx = state.cart.findIndex(c => c.name === state.currentItem.name && c.obs === obsText && c.price === finalPrice);
+      if (idx > -1) state.cart[idx].qty += state.customQty;
+      else state.cart.push({ id: Date.now() + Math.random(), name: state.currentItem.name, price: finalPrice, obs: obsText, qty: state.customQty });
+
+      saveCart();
+      window.renderCart();
+      window.closeCustomModal();
+      window.toast("Adicionado ao Pedido!");
+      setTimeout(() => window.toggleCart(true), 300);
+    };
+
+    window.toggleCart = (show) => {
+      const drawer = document.getElementById('cart-drawer');
+      const back = document.getElementById('cart-backdrop');
+      if (show) {
+        window.renderCart();
+        back.classList.remove('invisible', 'opacity-0');
+        drawer.classList.remove('translate-x-full');
+      } else {
+        back.classList.add('opacity-0');
+        drawer.classList.add('translate-x-full');
+        setTimeout(() => back.classList.add('invisible'), 300);
+      }
+    };
+
+    window.modCartItem = (id, d) => {
+      const idx = state.cart.findIndex(c => c.id === id);
+      if (idx > -1) {
+        state.cart[idx].qty += d;
+        if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
+        saveCart();
+        window.renderCart();
+      }
+    };
+
+    window.renderCart = () => {
+      const list = document.getElementById('cart-items');
+      if (!list) return;
+      list.innerHTML = "";
+      let subtotal = 0;
+      let count = 0;
+
+      if (state.cart.length === 0) {
+        list.innerHTML = `<div class="flex flex-col items-center justify-center py-10 opacity-50"><i data-lucide="shopping-cart" class="w-12 h-12 text-slate-300 mb-2"></i><p class="text-sm font-bold text-slate-400">Carrinho Vazio</p></div>`;
+        document.getElementById('checkout-form').classList.add('hidden');
+      } else {
+        document.getElementById('checkout-form').classList.remove('hidden');
+        state.cart.forEach(item => {
+          subtotal += item.price * item.qty;
+          count += item.qty;
+          list.innerHTML += `
+            <div class="flex justify-between items-start bg-white p-4 rounded-2xl border border-slate-100 shadow-sm animate-slide-up">
+              <div class="flex-1 pr-3">
+                <div class="flex items-center gap-2">
+                  <span class="bg-brand-50 text-brand-700 text-[10px] font-black px-2 py-0.5 rounded-lg">${item.qty}x</span>
+                  <span class="font-bold text-sm text-slate-800 leading-tight">${item.name}</span>
+                </div>
+                ${item.obs ? `<p class="text-[10px] text-slate-400 mt-1 italic font-medium line-clamp-2">${item.obs}</p>` : ''}
+                <p class="text-xs font-black text-brand-600 mt-1.5">R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</p>
+              </div>
+              <div class="flex items-center bg-slate-50 rounded-xl h-9 border border-slate-200 shrink-0">
+                <button onclick="window.modCartItem(${item.id}, -1)" class="w-9 active:text-red-500 font-bold">-</button>
+                <button onclick="window.modCartItem(${item.id}, 1)" class="w-9 active:text-green-500 font-bold">+</button>
+              </div>
+            </div>`;
+        });
+      }
+
+      let shipping = 0;
+      if (state.deliveryType === 'Entrega') {
+        const zone = document.getElementById('delivery-zone');
+        if (zone && zone.selectedIndex >= 0) {
+          const opt = zone.options[zone.selectedIndex];
+          if (opt.dataset.price) shipping = parseFloat(opt.dataset.price);
+        }
+      }
+
+      document.getElementById('cart-total').innerText = `R$ ${(subtotal + shipping).toFixed(2).replace('.', ',')}`;
+      const badge = document.getElementById('cart-count');
+      if (badge) {
+        badge.innerText = count;
+        badge.className = `absolute -top-1 -right-1 bg-brand-600 text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white transform transition-transform shadow-sm ${count > 0 ? 'scale-100' : 'scale-0'}`;
+      }
+
+      window.validateCheckout();
+      window.refreshIcons();
+    };
+
+    window.setDelivery = (type) => {
+      state.deliveryType = type;
+      const btnRet = document.getElementById('btn-retirada');
+      const btnEnt = document.getElementById('btn-entrega');
+      const details = document.getElementById('delivery-details');
+      const base = "p-4 border-2 rounded-2xl text-xs font-black uppercase tracking-wide transition-all";
+
+      if (type === 'Retirada') {
+        btnRet.className = `${base} border-brand-600 bg-brand-50 text-brand-700`;
+        btnEnt.className = `${base} border-slate-100 text-slate-400`;
+        details.classList.add('hidden');
+      } else {
+        btnEnt.className = `${base} border-brand-600 bg-brand-50 text-brand-700`;
+        btnRet.className = `${base} border-slate-100 text-slate-400`;
+        details.classList.remove('hidden');
+
+        const sel = document.getElementById('delivery-zone');
+        if (sel && sel.options.length <= 1) {
+          sel.innerHTML = '<option value="" disabled selected>Região de Entrega...</option>';
+          (state.config.zones || []).forEach((z, index) => {
+            const txt = z.price === 0 ? "Grátis" : `+R$ ${z.price.toFixed(2)}`;
+            sel.innerHTML += `<option value="${index}" data-price="${z.price}" data-name="${z.name}">${z.name} (${txt})</option>`;
+          });
+        }
+      }
+      window.renderCart();
+      window.saveFormData();
+    };
+
+    window.handlePaymentChange = () => {
+      const method = document.getElementById('payment-method').value;
+      const pixArea = document.getElementById('pix-area');
+      
+      if (method === 'Pix') {
+        if (pixArea) {
+          pixArea.classList.remove('hidden');
+          document.getElementById('pix-key').value = state.config.pixKey || '';
+          document.getElementById('pix-name-display').innerText = state.config.pixName || 'Titular da Conta';
+        }
+      } else {
+        if (pixArea) pixArea.classList.add('hidden');
+      }
+      window.validateCheckout();
+    };
+
+    window.copyPix = () => {
+      const k = document.getElementById('pix-key');
+      if (k) { k.select(); document.execCommand('copy'); window.toast("Chave Copiada!"); }
+    };
+
+    window.saveFormData = () => {
+      const data = {
+        name: document.getElementById('client-name')?.value,
+        phone: document.getElementById('client-phone')?.value,
+        address: document.getElementById('client-address')?.value,
+        payment: document.getElementById('payment-method')?.value,
+        deliveryType: state.deliveryType,
+        zoneVal: document.getElementById('delivery-zone')?.value,
+        obs: document.getElementById('obs-input')?.value
+      };
+      localStorage.setItem('burger_form_data_v4', JSON.stringify(data));
+    };
+
+    window.setupPhoneMask = () => {
+      const input = document.getElementById('client-phone');
+      if (!input) return;
+      input.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length === 0) { e.target.value = ''; return; }
+        let x = val.match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+        if (x) e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        window.saveFormData();
+        window.validateCheckout();
+      });
+    };
+
+    window.validateCheckout = () => {
+      const btn = document.getElementById('btn-checkout');
+      if (!btn) return;
+
+      const isOpen = window.isStoreOpen();
+      const cartOk = state.cart.length > 0;
+      const name = document.getElementById('client-name')?.value.trim();
+      const phone = document.getElementById('client-phone')?.value.trim();
+      const method = document.getElementById('payment-method')?.value;
+      const isDelivery = state.deliveryType === 'Entrega';
+      const zoneVal = document.getElementById('delivery-zone')?.value;
+      const address = document.getElementById('client-address')?.value.trim();
+
+      let msg = "Enviar Pedido pelo WhatsApp";
+      let disabled = false;
+
+      if (!isOpen) { msg = "Loja Fechada Agora"; disabled = true; }
+      else if (!cartOk) { msg = "Carrinho Vazio"; disabled = true; }
+      else if (!name) { msg = "Faltou o Nome"; disabled = true; }
+      else if (!phone || phone.length < 10) { msg = "Faltou o Telefone"; disabled = true; }
+      else if (isDelivery && !zoneVal) { msg = "Escolha a Região"; disabled = true; }
+      else if (isDelivery && !address) { msg = "Endereço Completo"; disabled = true; }
+      else if (!method) { msg = "Escolha o Pagamento"; disabled = true; }
+
+      btn.disabled = disabled;
+      const icon = disabled ? 'alert-circle' : 'message-circle';
+      btn.innerHTML = `<div class="relative z-10 flex items-center gap-2"><i data-lucide="${icon}" class="w-6 h-6 fill-white/20"></i><span>${msg}</span></div>`;
+      window.refreshIcons();
+    };
+
+    window.sendOrder = async () => {
+      try {
+        if (!state.cart || state.cart.length === 0) return window.toast("Seu carrinho está vazio!", "error");
+        if (!window.isStoreOpen()) return window.toast("Loja fechada.", "error");
+
+        const btn = document.getElementById('btn-checkout');
+        btn.innerHTML = '<div class="spinner"></div>';
+        btn.disabled = true;
+
+        const name = document.getElementById('client-name').value;
+        const phone = document.getElementById('client-phone').value;
+        const method = document.getElementById('payment-method').value;
+        const geralObs = document.getElementById('obs-input')?.value.trim() || "";
+
+        let zoneName = "";
+        let address = "";
+        let shipText = "Grátis";
+        let shipValue = 0;
+
+        if (state.deliveryType === 'Entrega') {
+          const zoneSelect = document.getElementById('delivery-zone');
+          const zoneOption = zoneSelect?.selectedOptions?.[0];
+          zoneName = zoneOption ? (zoneOption.getAttribute('data-name') || zoneOption.text) : "";
+          shipValue = zoneOption ? parseFloat(zoneOption.getAttribute('data-price') || 0) : 0;
+          address = document.getElementById('client-address').value;
+          shipText = shipValue === 0 ? "Grátis" : `R$ ${shipValue.toFixed(2).replace('.', ',')}`;
+        }
+
+        let paymentStatusFull = method;
+        if (method === 'Pix') paymentStatusFull += " (Chave Copiada)";
+
+        let subtotalVal = 0;
+        state.cart.forEach(i => subtotalVal += i.price * i.qty);
+        const subtotalStr = subtotalVal.toFixed(2).replace('.', ',');
+        const totalFinalCalculated = subtotalVal + shipValue;
+        const totalFinal = `R$ ${totalFinalCalculated.toFixed(2).replace('.', ',')}`;
+
+        const orderObj = {
+          createdAt: new Date().toISOString(),
+          clientName: name,
+          phone: phone,
+          address: state.deliveryType === 'Entrega' ? `${zoneName} - ${address}` : 'Retirada no Balcão',
+          deliveryType: state.deliveryType,
+          items: state.cart,
+          total: totalFinal,
+          deliveryFee: shipValue,
+          status: 'pendente',
+          obsGeral: geralObs,
+          paymentMethod: method
+        };
+        
+        if (db && auth && auth.currentUser) {
+            try {
+                await addDoc(collection(db, "pedidos"), orderObj);
+            } catch(e) { 
+                console.warn("Aviso: Falha ao sincronizar o pedido com a nuvem.", e); 
+                orderObj.id = Date.now().toString();
+                let localOrders = [];
+                try { localOrders = JSON.parse(localStorage.getItem('burger_orders_v4')) || []; } catch(err){}
+                localOrders.unshift(orderObj);
+                localStorage.setItem('burger_orders_v4', JSON.stringify(localOrders));
+            }
+        } else {
+            orderObj.id = Date.now().toString();
+            let localOrders = [];
+            try { localOrders = JSON.parse(localStorage.getItem('burger_orders_v4')) || []; } catch(err){}
+            localOrders.unshift(orderObj);
+            localStorage.setItem('burger_orders_v4', JSON.stringify(localOrders));
+        }
+
+        // BUILD WHATSAPP URL
+        let msg = `🍔 *NOVO PEDIDO - ${state.config.storeName.toUpperCase()}*\n`;
+        msg += `👤 *Cliente:* ${name}\n`;
+        msg += `💳 *Pagamento:* ${paymentStatusFull}\n`;
+
+        if (state.deliveryType === 'Entrega') {
+          msg += `📍 *Entrega:* ${zoneName}\n`;
+          msg += `🏠 *Endereço:* ${address}\n`;
+        } else {
+          msg += `📍 *Entrega:* Retirar no Balcão\n`;
+        }
+
+        msg += `\n*ITENS DO PEDIDO:*\n`;
+        state.cart.forEach(i => {
+          const itemTotal = (i.price * i.qty).toFixed(2).replace('.', ',');
+          msg += `▪️ *${i.qty}x ${i.name}* (R$ ${itemTotal})\n`;
+          if(i.obs) msg += `   ↳ _${i.obs}_\n`;
+        });
+
+        if (geralObs) msg += `\n📝 *OBS GERAL:* ${geralObs}\n`;
+
+        msg += `\n🧾 *RESUMO DA CONTA*\n`;
+        msg += `Subtotal: R$ ${subtotalStr}\n`;
+        if(state.deliveryType === 'Entrega') msg += `Taxa de Entrega: ${shipText}\n`;
+        msg += `💰 *TOTAL A PAGAR: ${totalFinal}*`;
+
+        const phoneNum = state.config.phone ? state.config.phone.replace(/\D/g, '') : "5511999999999";
+        const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(msg)}`;
+
+        state.cart = [];
+        saveCart();
+        document.getElementById('obs-input').value = "";
+        window.saveFormData();
+
+        window.open(url, '_blank');
+        setTimeout(() => window.location.reload(), 2000);
+
+      } catch (err) {
+        window.toast("Erro ao gerar pedido.", "error");
+        window.validateCheckout();
+      }
+    };
+
+    window.init = () => {
+      const hideSplash = () => {
+        const splash = document.getElementById('splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(() => splash.style.display = 'none', 500);
+        }
+      };
+      
+      window.loadLocalConfig();
+      const savedCart = localStorage.getItem('burger_cart_v4');
+      if (savedCart) state.cart = JSON.parse(savedCart);
+
+      window.renderCategories();
+      window.setupPhoneMask();
+      window.renderMenu();
+      window.renderCart();
+      window.renderPosts();
+      window.renderHighlights();
+      window.updateUI();
+      
+      window.initFirebase();
+      
+      try{
+         const savedForm = localStorage.getItem('burger_form_data_v4');
+         if(savedForm) {
+            const data = JSON.parse(savedForm);
+            if(document.getElementById('client-name')) document.getElementById('client-name').value = data.name || '';
+            if(document.getElementById('client-phone')) document.getElementById('client-phone').value = data.phone || '';
+         }
+      }catch(e){}
+
+      setTimeout(hideSplash, 2000);
+      setInterval(() => {
+          window.updateUI();
+      }, 60000); 
+    };
+
+    window.onload = window.init;
+  </script>
+</body>
+</html>
