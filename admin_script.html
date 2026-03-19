@@ -18,6 +18,101 @@
         { id: "Bebidas", name: "BEBIDAS" }
     ];
 
+    const DEFAULT_ITEMS = [
+      { name: "Hambúrguer", description: "(Pão, carne, salada, milho e batata palha)", price: 8.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Misto", description: "(Pão, mussarela e presunto)", price: 7.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Americano", description: "(Pão, ovo, mussarela, presunto, salada, milho e batata palha)", price: 10.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luizinho", description: "(Pão, frango, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "X-Burguer", description: "(Pão, carne, mussarela, presunto, salada, milho e batata palha)", price: 11.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Burguer Cheddar", description: "(Pão, carne, cheddar, salada, milho e batata palha)", price: 10.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Eggs Burguer", description: "(Pão, carne, ovo, mussarela, presunto, salada, milho e batata palha)", price: 12.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Eggs Cheddar", description: "(Pão, carne, mussarela, presunto, ovo, cheddar, salada, milho e batata palha)", price: 13.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Super Burguer", description: "(Pão, 2 carne, 2 ovos, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Frango", description: "(Pão, 2 carne, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 18.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Calabresa", description: "(Pão, 2 carne, ovo, calabresa, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Bacon", description: "(Pão, 2 carne, ovo, bacon, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Coração", description: "(Pão, 2 carne, ovo, coração, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial Toscana", description: "(Pão, 2 carne, ovo, toscana, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "X-Tudo", description: "(Pão, carne, ovo, frango, calabresa, bacon, coração, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Luis Especial", description: "(Pão, 2 carne, 2 ovo, frango, calabresa, bacon, coração, 2 mussarela, 2 presunto, salada, milho e batata palha)", price: 24.00, category: "Tradicionais", customizable: true, available: true },
+      { name: "Super Luis", description: "(Pão, 2 carne, cheddar, frango, calabresa, bacon, coração, toscana, 2 mussarela, 2 presunto, salada, milho e batata palha)", price: 30.00, category: "Tradicionais", customizable: true, available: true },
+
+      // LANCHES DE BACON
+      { name: "X-Bacon", description: "(Pão, carne, bacon, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Bacon", customizable: true, available: true },
+      { name: "Eggs Bacon", description: "(Pão, carne, bacon, ovo, mussarela, presunto, salada, milho e batata palha)", price: 18.00, category: "Bacon", customizable: true, available: true },
+      { name: "Bacon Especial", description: "(Pão, carne, bacon, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Bacon", customizable: true, available: true },
+
+      // LANCHES DE FRANGO
+      { name: "X-Frango", description: "(Pão, carne, frango, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Frango", customizable: true, available: true },
+      { name: "Eggs Frango", description: "(Pão, carne, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Frango", customizable: true, available: true },
+      { name: "Frango Especial", description: "(Pão, carne, frango, calabresa, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Frango", customizable: true, available: true },
+
+      // LANCHES DE TOSCANA
+      { name: "X-Toscana", description: "(Pão, carne, toscana, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Toscana", customizable: true, available: true },
+      { name: "Eggs Toscana", description: "(Pão, carne, toscana, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Toscana", customizable: true, available: true },
+      { name: "Toscana Especial", description: "(Pão, carne, toscana, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Toscana", customizable: true, available: true },
+
+      // LANCHES DE CALABRESA
+      { name: "X-Calabresa", description: "(Pão, carne, calabresa, mussarela, presunto, salada, milho e batata palha)", price: 14.00, category: "Calabresa", customizable: true, available: true },
+      { name: "Eggs Calabresa", description: "(Pão, carne, calabresa, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Calabresa", customizable: true, available: true },
+      { name: "Calabresa Especial", description: "(Pão, carne, calabresa, bacon, ovo, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Calabresa", customizable: true, available: true },
+
+      // LANCHES DE CORAÇÃO
+      { name: "X-Coração", description: "(Pão, carne, coração, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Coração", customizable: true, available: true },
+      { name: "Eggs Coração", description: "(Pão, carne, coração, ovo, mussarela, presunto, salada, milho e batata palha)", price: 17.00, category: "Coração", customizable: true, available: true },
+      { name: "Coração Especial", description: "(Pão, carne, coração, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Coração", customizable: true, available: true },
+
+      // CARNE DO SOL
+      { name: "X-Carne do Sol", description: "(Pão, carne, carne do sol, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Carne do Sol", customizable: true, available: true },
+      { name: "Eggs Carne do Sol", description: "(Pão, carne, carne do sol, ovo, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 23.00, category: "Carne do Sol", customizable: true, available: true },
+      { name: "Carne do Sol Especial", description: "(Pão, carne, carne do sol, creme cheese, frango, ovo, mussarela, presunto, salada, milho e batata palha)", price: 25.00, category: "Carne do Sol", customizable: true, available: true },
+
+      // CHARQUE
+      { name: "X-Charque", description: "(Pão, carne, charque, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Charque", customizable: true, available: true },
+      { name: "Eggs Charque", description: "(Pão, carne, charque, ovo, creme cheese, mussarela, presunto, salada, milho e batata palha)", price: 22.00, category: "Charque", customizable: true, available: true },
+      { name: "Charque Especial", description: "(Pão, carne, charque, frango, creme cheese, ovo, mussarela, presunto, salada, milho e batata palha)", price: 25.00, category: "Charque", customizable: true, available: true },
+
+      // PICANHA
+      { name: "X-Picanha", description: "(Pão, carne de picanha, salada, milho e batata palha)", price: 14.00, category: "Picanha", customizable: true, available: true },
+      { name: "Eggs Picanha", description: "(Pão, carne de picanha, ovo, mussarela, presunto, salada, milho e batata palha)", price: 15.00, category: "Picanha", customizable: true, available: true },
+      { name: "Super Picanha", description: "(Pão, 2 carne de picanha, mussarela, presunto, salada, milho e batata palha)", price: 19.00, category: "Picanha", customizable: true, available: true },
+      { name: "Picanha Especial", description: "(Pão, carne de picanha, ovo, bacon, frango, mussarela, presunto, salada, milho e batata palha)", price: 24.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Bacon", description: "(Pão, carne de picanha, ovo, bacon, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Frango", description: "(Pão, carne de picanha, ovo, frango, mussarela, presunto, salada, milho e batata palha)", price: 20.00, category: "Picanha", customizable: true, available: true },
+      { name: "X-Picanha C/ Cheddar", description: "(Pão, carne de picanha, cheddar, mussarela, presunto, salada, milho e batata palha)", price: 16.00, category: "Picanha", customizable: true, available: true },
+
+      // CACHORRO QUENTE
+      { name: "Cachorro Quente Tradicional", description: "(Pão, salsicha, verduras, catupiry, alface, queijo ralado e batata palha)", price: 10.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Frango", description: "(Pão, salsicha, verduras, frango, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Bacon", description: "(Pão, salsicha, verduras, bacon, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente C/ Calabresa", description: "(Pão, salsicha, verduras, calabresa, catupiry, alface, queijo ralado e batata palha)", price: 14.00, category: "Cachorro Quente", customizable: true, available: true },
+      { name: "Cachorro Quente Especial", description: "(Pão, salsicha, verduras, frango, bacon, calabresa, catupiry, cheddar, alface, queijo ralado e batata palha)", price: 23.00, category: "Cachorro Quente", customizable: true, available: true },
+
+      // COMBOS
+      { name: "Combo 1", description: "(3 X-Burguer e 1 Refrigerante de 1L)", price: 35.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 2", description: "(3 Eggs Burguer + 1 Refrigerante 1L)", price: 38.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 3", description: "(4 Eggs Burguer + 1 Refrigerante 1L)", price: 46.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 4", description: "(2 X-Calabresa e 1 Refrigerante de 1L)", price: 40.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 5", description: "(5 X-Burguer e 1 Refrigerante de 1L)", price: 55.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 6", description: "(2 X-Tudo e 1 Refrigerante de 1L)", price: 47.00, category: "Combos", customizable: false, available: true },
+      { name: "Combo 7", description: "(2 Cachorro Quente Tradicionais e 1 Refrigerante de 1L)", price: 25.00, category: "Combos", customizable: false, available: true },
+
+      // BEBIDAS
+      { name: "Suco de Poupa C/ Leite", description: "(Goiaba, Graviola, Manga, Mangaba, Tamarindo, Ameixa, Umbu, Acerola, Maracujá, Morango)", price: 6.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Suco de Poupa S/ Leite", description: "(Goiaba, Graviola, Manga, Mangaba, Tamarindo, Ameixa, Umbu, Acerola, Maracujá, Morango)", price: 6.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Bomba Baiana", description: "(Morango ou Açaí)", price: 7.00, category: "Bebidas", customizable: true, available: true },
+      { name: "Coca Cola 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Fanta 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Guaraná 1 L", description: "Refrigerante 1L", price: 10.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Goob 1L", description: "Refrigerante 1L", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Coca Cola Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Guaraná Antarctica Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Fanta Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true },
+      { name: "Sprite Lata", description: "Lata 350ml", price: 5.00, category: "Bebidas", customizable: false, available: true }
+    ];
+
+
+
     const firebaseConfig = {
       apiKey: "AIzaSyCLRyB1IJOrX39HPQqDh-0ZPtsHG3dCJ68",
       authDomain: "hamburguerialuis.firebaseapp.com",
@@ -36,7 +131,7 @@
         phone: "5579988486097",
         statusMode: "open",
         openingHours: { start: 18, end: 23 },
-        sizes: [],
+        sizes: DEFAULT_ITEMS,
         accompaniments: { extras: [], ponto: [], remocoes: [] },
         highlights: [],
         posts: [],
@@ -205,7 +300,7 @@
         if (!state.config.accompaniments) state.config.accompaniments = { extras: [], ponto: [], remocoes: [] };
         if (!state.config.posts) state.config.posts = [];
         if (!state.config.highlights) state.config.highlights = [];
-        if (!state.config.sizes) state.config.sizes = [];
+        if (!state.config.sizes || state.config.sizes.length === 0) state.config.sizes = DEFAULT_ITEMS;
         if (!state.config.zones) state.config.zones = [];
         if (!state.config.categories) state.config.categories = DEFAULT_CATEGORIES;
         if (!state.config.deliverers) state.config.deliverers = [];
@@ -977,3 +1072,4 @@
   </script>
 </body>
 </html>
+
